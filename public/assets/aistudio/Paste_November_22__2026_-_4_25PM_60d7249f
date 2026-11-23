@@ -1,0 +1,1068 @@
+# **Admin Panel – Complete Technical Requirements Document (TRD)**
+
+This TRD defines a production-ready **Café Management Admin Panel** built with Next.js, React and TypeScript.
+
+The admin panel will allow the café owner and authorized staff to manage the complete website and business operations from one centralized dashboard without editing code.
+
+The architecture will support product/menu management, orders, customers, payments, delivery, offers, website content, analytics and business settings.
+
+[Coffee Shop Dashboard Management by Mubarak Hossen on Dribbble](https://images.openai.com/static-rsc-4/hVp_iipvGRM-0xBH0Q-oDcRBksG9z2puUWtuQew-zcRXZobGk6Nkwfzi8piMR_fTzV6YkeVrUBzqzNZBfQZzWZbJYC2CoH8EktBHtSicg6hIJvT98iab06Xsq2hWE1n0FnCUQozXgo89Hj1PXXQVnO_u6EL2zotMy1TTCLccCNE?purpose=inline)
+
+[Restaurant Management SaaS product - Order page by Josim for Zain's Studio on Dribbble](https://images.openai.com/static-rsc-4/3bSQgJgkYu5xq-URyhqKO3IEtpUF1N0iGfSacKEca05ItieDbe79CJwv4wAjsSRMBfbBNzjPXdA3FnsgKY4_f7ElMlOnebF657_WYa1BguqiOtqN_K8HLP1YI3CTHvYGmI0YhbdIFB26DodOEAxpuGJ1Ym2f_YnQzlhxe6u3Amc?purpose=inline)
+
+[Point Of Sale Dashboard - Coffee Shop by Aryo Romadhon on Dribbble](https://images.openai.com/static-rsc-4/M44JRjBOsNRJW0XpkXIo4YuQYBAgWDNQfobXagjkOi_Tk7IHz2zRbyPKWJEml7yloEwR7fg_fWcVrn-rY16jPcYHiY3tc1yqY2GEsgWmcm2HmmMXeDuLXFOXDl5jcX5vPwJ5gR27-m3YX-hQWnnr554KcOWFiSOw1Fm1TcQuKwo?purpose=inline)
+
+17
+
+Production-oriented
+
+Next.js + TypeScript
+
+Role-based access
+
+## **1. Project overview**
+
+**Project:** Café Admin Dashboard
+
+**Primary objective:** Build a secure, responsive dashboard to manage every important part of the café's online presence and e-commerce operations.
+
+### **Main modules**
+
+| Module      | Functionality                        |
+| ----------- | ------------------------------------ |
+| Dashboard   | Business overview and statistics     |
+| Orders      | Manage incoming and completed orders |
+| Products    | Add, edit, delete menu items         |
+| Categories  | Manage food and beverage categories  |
+| Inventory   | Track available stock                |
+| Customers   | Customer profiles and history        |
+| Payments    | Payment tracking and refunds         |
+| Delivery    | Delivery and pickup management       |
+| Offers      | Coupons, discounts and promotions    |
+| Reviews     | Manage customer reviews              |
+| Website CMS | Edit website content and banners     |
+| Analytics   | Sales, revenue and customer reports  |
+| Staff       | Staff accounts and permissions       |
+| Settings    | Configure business operations        |
+
+## **2. Technology architecture**
+
+### **Frontend**
+
+| Technology           | Purpose                    |
+| -------------------- | -------------------------- |
+| Next.js (App Router) | Main application framework |
+| React                | UI components              |
+| TypeScript           | Type safety                |
+| Tailwind CSS         | Styling                    |
+| shadcn/ui            | Dashboard components       |
+| Lucide React         | Icons                      |
+| Framer Motion        | Animations                 |
+| React Hook Form      | Form management            |
+| Zod                  | Schema validation          |
+| TanStack Table       | Data tables                |
+| Recharts             | Analytics charts           |
+
+### **Backend**
+
+| Technology             | Purpose                  |
+| ---------------------- | ------------------------ |
+| Next.js Route Handlers | Backend API              |
+| Server Actions         | Secure mutations         |
+| PostgreSQL             | Main database            |
+| Prisma ORM             | Database operations      |
+| Supabase Auth          | Authentication           |
+| Supabase Storage       | Product images and media |
+| Supabase Realtime      | Live order updates       |
+| Resend                 | Transactional emails     |
+
+Recommended deployment: Vercel + Supabase PostgreSQL. Keep database credentials and service-role keys exclusively on the server.
+
+### **Architecture overview**
+
+**Admin Dashboard**
+
+Next.js + React + TypeScript
+
+**Authentication**
+
+Supabase Auth
+
+**API Layer**
+
+Route Handlers
+
+**Business Logic Layer**
+
+Validation · Authorization · Services
+
+**PostgreSQL**
+
+Business data
+
+**Storage**
+
+Images and files
+
+## **3. Complete application flow**
+
+### **Admin authentication**
+
+[Caisse Backoffice Revamp — E-commerce · Built with Blink](https://images.openai.com/static-rsc-4/lup7mruEiaRISn1eLdoQGZHObQO0BsPws4ni1tZQbYGnSWvcLxie4RiZgGAsfK2Zlu2qvpprpQJr4wu_CSft-PZkNzKIeVvZBv1RE_dNFHZJNeuVRpg08FC3tHRp3jmbYbxdfy1zj59sBNaMq4Gbd0sFb3VcFd-X0EZaUYeheYc?purpose=inline)
+
+[blink.new](https://blink.new/p/caisse-backoffice-redesign-6h2g3uod?utm_source=chatgpt.com)
+
+- Dedicated admin login page.
+- Email and password authentication.
+- Forgot password functionality.
+- Email verification.
+- Optional two-factor authentication.
+- Session management.
+- Automatic logout after configured inactivity.
+- Protected admin routes.
+- Unauthorized access redirection.
+
+**Login flow:**
+
+```
+Admin visits /admin
+       ↓
+Authentication Check
+       ↓
+Is user authenticated?
+   ↙           ↘
+ No             Yes
+ ↓               ↓
+Login Page    Role Check
+ ↓               ↓
+Verify         Permission Check
+Credentials       ↓
+ ↓             Dashboard
+Dashboard
+```
+
+### **Admin roles**
+
+| Role              | Access                    |
+| ----------------- | ------------------------- |
+| Super Admin       | Complete access           |
+| Owner             | Business management       |
+| Manager           | Orders, products, reports |
+| Staff             | Order processing          |
+| Inventory Manager | Stock management          |
+
+Permissions must be enforced server-side, not just by hiding dashboard buttons.
+
+## **4. Dashboard UI/UX design brief**
+
+[Coffee Shop Admin Dashboard — Data-Driven Cafe Management by Joyeta Banerjee on Dribbble](https://images.openai.com/static-rsc-4/DxKhsibpJHmQaDAR9czM-jspc6a46KFJiYynr0Tm8_n35avazKbkPJ-oAEAX11t-Z8yCyU3HYF2NuJhZeKlZR94UEsG2AkIp4BGL6IUKF1mKQ-yuoh75xB7jddsYP1fuhZGSxJkCICj7VyuuvU9lVfGfb2JC4fM5YQrwsPZdTSQ?purpose=inline)
+
+[MirachPOS | #1 Restaurant & Cafe POS System in Ethiopia](https://images.openai.com/static-rsc-4/KO7Lly4zvgw_gkxnZPFRB-d4I4N3b9nNvW81DvGKxACgTsvrfk_L51IepTdCIgJZgVlPkSpZx8v2ePjsrurPVa3sFf9bnXOsLOOYp_qijIJwY5dPJfq8Fb4lkq5K1vOnbMvSegOtTZDMGffiml14Dvk4rpigj-lcAt9zrGq1kWE?purpose=inline)
+
+[Restaurant POS & Order Management System by Tajrin Nahar on Dribbble](https://images.openai.com/static-rsc-4/uVszTSZL48XMwNtrTivKwaL3GFDQyeeF-qEO7wT9WkVcFS2r00-nM8-kAF1KfnYQCYqykSdRoksNHDEaBJvWL_RT86SOJf8ubHnKjz1VU_xwBL3bqVTqt5NG3w8azhMdMbprHpa4oGoOpHnMxSn5C5zKOaMzxJ6GPLAMHKU9s1Q?purpose=inline)
+
+14
+
+### **Main dashboard layout**
+
+**Left sidebar**
+
+- Logo and business name.
+- Dashboard.
+- Orders.
+- Products.
+- Categories.
+- Inventory.
+- Customers.
+- Payments.
+- Delivery.
+- Coupons.
+- Reviews.
+- Website CMS.
+- Analytics.
+- Staff management.
+- Settings.
+- Logout.
+
+**Top navigation**
+
+- Search.
+- Notifications.
+- Quick actions.
+- Current date.
+- Admin profile.
+- Theme switcher.
+
+**Dashboard content**
+
+1. Total revenue.
+2. Total orders.
+3. Pending orders.
+4. Total customers.
+5. Sales analytics chart.
+6. Recent orders.
+7. Best-selling products.
+8. Low-stock notifications.
+9. Recent customer activity.
+
+### **Dashboard interactions**
+
+- Sidebar collapses on desktop.
+- Mobile sidebar becomes a drawer.
+- Search across orders and products.
+- Date-range filters for analytics.
+- Clickable statistic cards.
+- Real-time order notifications.
+- Confirmation dialogs for destructive actions.
+- Loading skeletons and empty states.
+
+## **5. Admin module requirements**
+
+### **5.1 Dashboard management**
+
+[Restaurant Management Software - Dashboard UI Design by Sohan Talukder for Olack Web & Theme  on Dribbble](https://images.openai.com/static-rsc-4/7nAhl7MaWgxiEiD4qREOkkLYwh52rxV6Bp8DstlIPjYkm54vwW8OF694DmlvtfeCMbrZ78sPZeOA9bpNbOcZU_ebg_M4kFCLgNLXBI5bxYl7o5WMa5wSfJC0_Ou_ukWIoMJsjZGbuztCpEswJ2gsIBdNoODzT_mOCJDym7WBSPs?purpose=inline)
+
+[dribbble.com](https://dribbble.com/shots/27038439-Restaurant-Management-Software-Dashboard-UI-Design?utm_source=chatgpt.com)
+
+Required features:
+
+- Today's revenue.
+- Weekly and monthly revenue.
+- Order count.
+- Average order value.
+- Sales comparison.
+- Revenue chart.
+- Most popular products.
+- Recent orders.
+- Pending payment summary.
+- Inventory alerts.
+
+Filters: Today, Yesterday, Last 7 Days, Last 30 Days, Custom Range.
+
+### **5.2 Order management**
+
+[BYTEBITE POS](https://images.openai.com/static-rsc-4/_yXpgDDRoXJIfifAKUcm4r7ZfyQp8lfc2FGWl2M-x6TDYoiQDB-HmRGMVMYf1eTH2PwdzP4hAMNoYdnUlxbUT48mXQuTUgMD8Cb6qqKxiB1-zF-OT5kuJAvH_GPviZogmwNkFONEXGqh28jNiiaZU7oB86O5cdVeE4m8iq7ZMxs?purpose=inline)
+
+[bytebitepos.com](https://bytebitepos.com/?utm_source=chatgpt.com)
+
+Order status workflow:
+
+```
+NEW ORDER
+    ↓
+CONFIRMED
+    ↓
+PREPARING
+    ↓
+READY
+    ↓
+OUT FOR DELIVERY
+    ↓
+DELIVERED
+```
+
+Additional statuses:
+
+- Cancelled.
+- Rejected.
+- Refund requested.
+- Refunded.
+
+Features:
+
+- View complete order details.
+- Customer information.
+- Ordered items and quantities.
+- Custom instructions.
+- Payment status.
+- Delivery address.
+- Pickup or delivery selection.
+- Update order status.
+- Print invoices.
+- Cancel orders with reason.
+- Refund tracking.
+- Order history.
+
+**Important:** Every order status change must be logged with the user, timestamp and previous/new status.
+
+### **5.3 Product and menu management**
+
+[Introducing Good Eats, a modern restaurant management dashboard by made_bysalah on Dribbble](https://images.openai.com/static-rsc-4/p7UTNI4FCEZbOpIkPY8qx6uu-E0pMesZqR_W9TaZvLGzxu8I6sfokze6apSSSBi5jl1rhgOwQgCZL2Q80-KutAxcmHvwzJjP1FnNkkuSGzC6oes4YghhRBISC85AiIYeTP9rb8iJ4EEXzBKyHUIgjEXO_sm3gdQ_K9crLXuCnAQ?purpose=inline)
+
+[dribbble.com](https://dribbble.com/shots/25212710-Introducing-Good-Eats-a-modern-restaurant-management-dashboard?utm_source=chatgpt.com)
+
+Product CRUD functionality:
+
+- Add new product.
+- Edit product.
+- Delete product.
+- Upload multiple images.
+- Product name and description.
+- Price and discounted price.
+- Category assignment.
+- Product availability.
+- Featured product.
+- Bestseller label.
+- Veg/non-veg classification.
+- Preparation time.
+- Stock availability.
+- Product variants and add-ons.
+
+Example product:
+
+```
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  discountPrice?: number;
+  categoryId: string;
+  images: string[];
+  isAvailable: boolean;
+  isFeatured: boolean;
+  stockQuantity?: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### **5.4 Category management**
+
+- Create categories.
+- Edit category names.
+- Upload category images.
+- Reorder categories.
+- Enable/disable categories.
+- Assign products.
+- Manage category descriptions.
+
+Example:
+
+- Coffee.
+- Tea.
+- Cold Beverages.
+- Burgers.
+- Pizza.
+- Desserts.
+- Snacks.
+
+### **5.5 Inventory management**
+
+- Current stock.
+- Stock adjustment.
+- Low-stock alerts.
+- Stock movement history.
+- Purchase records.
+- Supplier management.
+- Out-of-stock product handling.
+- Inventory reports.
+
+For accurate inventory, support ingredient-level stock and recipe consumption as an optional advanced module.
+
+### **5.6 Customer management**
+
+- Customer list.
+- Name and phone.
+- Email.
+- Order history.
+- Total spending.
+- Last order date.
+- Customer status.
+- Customer notes.
+- Export customer data.
+
+Respect consent and applicable privacy requirements when using customer data for marketing.
+
+### **5.7 Payment management**
+
+[Payments Dashboard — Manage Transactions | Pine Labs](https://images.openai.com/static-rsc-4/iyM0oG979xNZn5aKoh9pIClaRi_MBHPyUsXSR0g4C-uOn_3DbCWLysdHfduFOUmegBRcMLDZ5eaVj91LzTkytw6OXWHQQSrsdMoBRwN8dVbTIOVAvm5ZEgnzLyI-UQ8IdXYzL2CGlGYoWhrTqLHwiiF8OpFwrL-vfPNrqPDcl9s?purpose=inline)
+
+[pinelabs.com](https://www.pinelabs.com/docs/online-payments/dashboard/payments?utm_source=chatgpt.com)
+
+Payment options:
+
+- Cash on Delivery.
+- Cash on Pickup.
+- UPI.
+- Razorpay.
+- Card payments.
+- Net banking.
+
+Features:
+
+- Transaction history.
+- Payment verification.
+- Pending payments.
+- Failed payments.
+- Refund processing.
+- Payment reconciliation.
+- Invoice generation.
+
+**Security:** Never store card numbers, CVVs, UPI PINs or payment credentials. Verify payment gateway webhooks on the server.
+
+### **5.8 Delivery management**
+
+- Delivery and pickup options.
+- Delivery zones.
+- Delivery charges.
+- Minimum order amount.
+- Estimated delivery time.
+- Delivery status.
+- Delivery partner details.
+- Service availability.
+- Pincode restrictions.
+
+### **5.9 Coupon and discount management**
+
+- Create coupon codes.
+- Fixed discounts.
+- Percentage discounts.
+- Minimum order value.
+- Maximum discount limit.
+- Expiry date.
+- Usage limits.
+- First-order discounts.
+- Active/inactive status.
+
+### **5.10 Review management**
+
+- Customer ratings.
+- Review list.
+- Approve or hide reviews.
+- Reply to reviews.
+- Flag inappropriate content.
+- Average rating analytics.
+
+### **5.11 Website CMS**
+
+Allow administrators to edit the public café website without developer assistance.
+
+| Section      | Admin functionality      |
+| ------------ | ------------------------ |
+| Hero         | Heading, subtitle, image |
+| About        | Business description     |
+| Menu         | Product listings         |
+| Gallery      | Upload images            |
+| Offers       | Promotional banners      |
+| Testimonials | Customer feedback        |
+| Contact      | Address and contact      |
+| Footer       | Social links and details |
+| SEO          | Page metadata            |
+
+Include draft, preview and publish functionality.
+
+### **5.12 Analytics and reports**
+
+- Revenue reports.
+- Order reports.
+- Product performance.
+- Customer acquisition.
+- Payment reports.
+- Coupon performance.
+- Best-selling products.
+- Sales by date.
+- Export PDF/CSV.
+
+### **5.13 Staff management**
+
+- Create staff accounts.
+- Assign roles.
+- Set permissions.
+- Activate/deactivate accounts.
+- Track admin activity.
+- Login history.
+- Audit logs.
+
+### **5.14 Business settings**
+
+- Business name.
+- Logo.
+- Contact number.
+- WhatsApp number.
+- Email.
+- Business address.
+- Opening hours.
+- Holiday settings.
+- Tax settings.
+- Currency.
+- Delivery configuration.
+- Payment gateway settings.
+- Social media URLs.
+
+## **6. Typography system**
+
+Use a premium café-inspired typography combination.
+
+| Usage              | Font             | Weight  |
+| ------------------ | ---------------- | ------- |
+| Main headings      | Playfair Display | 600–700 |
+| Dashboard headings | Inter            | 600     |
+| Body text          | Inter            | 400–500 |
+| Buttons            | Inter            | 500–600 |
+| Numbers            | Inter            | 600–700 |
+
+Recommended sizing:
+
+| Element         | Size    |
+| --------------- | ------- |
+| Dashboard title | 28–32px |
+| Section heading | 20–24px |
+| Card heading    | 15–16px |
+| Body            | 14–15px |
+| Labels          | 12–13px |
+| Table content   | 13–14px |
+
+## **7. Café-focused color system**
+
+[AI网站配色生成器 - Somake AI](https://images.openai.com/static-rsc-4/MupxuQbOxoFF0-FMPyQWCyk0KKbMvjjQ-YmS4fobaTQ1fNsgaOrQGJf1rw6sAvsJfDAihKAGrrs2tgvyiyUjfhXfiKN85NpP75uAYiq2iETdIrDBswe7JiqOeaZUtvwdaYESm8foEHgcYq9J2kIhl4Gx0UxlVTjrJJQZ3vO9q3w?purpose=inline)
+
+[somake.ai](https://www.somake.ai/zh_CN/tools/website-color-palette-generator?utm_source=chatgpt.com)
+
+| Color         | Hex       | Usage      |
+| ------------- | --------- | ---------- |
+| Espresso      | `#2B1E18` | Sidebar    |
+| Coffee Brown  | `#593B2B` | Primary    |
+| Caramel       | `#B77945` | Accent     |
+| Cream         | `#F7F2EA` | Background |
+| White         | `#FFFFFF` | Cards      |
+| Dark Charcoal | `#252321` | Text       |
+| Success       | `#21865B` | Completed  |
+| Warning       | `#D99A36` | Pending    |
+| Danger        | `#D94C4C` | Cancelled  |
+
+Use cream backgrounds with white cards and espresso-colored navigation. Avoid excessive gradients.
+
+## **8. Responsive breakpoints**
+
+| Device        | Width       | Layout              |
+| ------------- | ----------- | ------------------- |
+| Mobile        | 320–639px   | Single column       |
+| Tablet        | 640–767px   | Compact layout      |
+| Small laptop  | 768–1023px  | Collapsible sidebar |
+| Desktop       | 1024–1439px | Full dashboard      |
+| Large desktop | 1440px+     | Expanded dashboard  |
+
+Mobile requirements:
+
+- Responsive sidebar drawer.
+- Horizontally scrollable tables or mobile card layouts.
+- Touch-friendly controls.
+- Responsive forms.
+- Fixed action buttons where useful.
+- No horizontal page overflow.
+
+## **9. Animations and interactions**
+
+### **Text animations**
+
+- Smooth page heading entrance.
+- Number count-up animation.
+- Subtle notification appearance.
+
+### **Scroll animations**
+
+- Section fade-in.
+- Staggered card entrance.
+- Smooth chart appearance.
+
+### **Hover animations**
+
+- Card elevation.
+- Button transitions.
+- Sidebar active state.
+- Product image zoom.
+
+### **Reduced-motion accessibility**
+
+Support `prefers-reduced-motion: reduce`.
+
+When enabled:
+
+- Disable decorative movement.
+- Remove parallax.
+- Minimize transitions.
+- Avoid automatic count-up animations.
+
+Animations should never delay important admin operations.
+
+## **10. Integrations**
+
+### **WhatsApp**
+
+- WhatsApp order notifications.
+- Customer enquiry button.
+- Order confirmation message.
+- Support communication.
+- Click-to-chat integration.
+
+Example:
+
+```
+const phone = "919692007455";
+const message = "Hello, your order has been confirmed.";
+
+const url =
+  `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+```
+
+Use the WhatsApp Business Platform for automated business-initiated notifications where required, with customer opt-in.
+
+### **Phone integration**
+
+```
+<a href="tel:+919692007455">
+  Call Business
+</a>
+```
+
+### **Google Maps**
+
+- Display café location.
+- Directions button.
+- Embed map.
+- Location links.
+
+### **Apple Maps**
+
+```
+const appleMapsUrl =
+  "https://maps.apple.com/?q=Cafe+Location";
+```
+
+## **11. Local SEO**
+
+Admin-managed SEO settings:
+
+- Business name.
+- Primary business category.
+- Address.
+- Phone number.
+- Business hours.
+- Location coordinates.
+- Service area.
+- Social profiles.
+
+SEO implementation:
+
+- Location-specific landing pages where useful.
+- Descriptive page titles.
+- Local keywords.
+- Image alt text.
+- Internal linking.
+- Canonical URLs.
+- Google Business Profile consistency.
+
+## **12. Metadata, Open Graph, sitemap and robots**
+
+Implement:
+
+- Dynamic metadata.
+- Open Graph titles and images.
+- Twitter/X cards.
+- Canonical URLs.
+- Dynamic sitemap.
+- Robots.txt.
+- Search engine indexing controls.
+
+Important: All `/admin` pages, login pages and private dashboard content must be excluded from search indexing.
+
+## **13. LocalBusiness structured data**
+
+Use Schema.org structured data with an appropriate subtype such as `CafeOrCoffeeShop` or `Restaurant`.
+
+Include:
+
+- Business name.
+- Address.
+- Phone.
+- Opening hours.
+- Geo coordinates.
+- Website URL.
+- Price range.
+- Menu URL.
+
+Keep structured data consistent with visible website content.
+
+## **14. Cookies and consent**
+
+- Cookie policy.
+- Necessary cookies.
+- Analytics cookies.
+- Marketing cookies.
+- Cookie preference management.
+- Consent withdrawal.
+- Secure cookie settings.
+
+Non-essential tracking should only activate after the required consent is obtained.
+
+## **15. Privacy policy requirements**
+
+The privacy policy should explain:
+
+- Customer information collected.
+- Purpose of data collection.
+- Payment processing.
+- Order processing.
+- Cookies and analytics.
+- Data sharing with service providers.
+- Data retention.
+- User rights.
+- Contact information.
+- Grievance contact where legally required.
+
+Ensure compliance with applicable Indian privacy and data protection requirements, including the DPDP framework and relevant rules in force at launch.
+
+## **16. Terms and guidelines**
+
+Required public-facing policies:
+
+1. Terms and Conditions.
+2. Privacy Policy.
+3. Refund and Cancellation Policy.
+4. Shipping and Delivery Policy.
+5. Cookie Policy.
+6. Customer Guidelines.
+
+Admin should be able to update policy content and maintain version history.
+
+## **17. Security requirements**
+
+Critical
+
+Security must be enforced across the entire admin application.
+
+- Server-side role verification.
+- Secure authentication.
+- Password hashing through the authentication provider.
+- CSRF protection where applicable.
+- XSS prevention.
+- SQL injection prevention.
+- Input validation with Zod.
+- Rate limiting.
+- Secure HTTP headers.
+- Environment variable protection.
+- File upload validation.
+- Image size restrictions.
+- Payment webhook signature verification.
+- Database backups.
+- Audit logs.
+- Session expiration.
+- Least-privilege database access.
+- Row Level Security where appropriate.
+
+Never trust client-side role information or prices submitted by the browser. Recalculate totals and validate inventory on the server.
+
+## **18. Accessibility**
+
+Follow WCAG 2.2 AA principles.
+
+- Semantic HTML.
+- Keyboard navigation.
+- Visible focus states.
+- Accessible forms.
+- ARIA labels when necessary.
+- Screen-reader-friendly tables.
+- Sufficient color contrast.
+- Accessible modal dialogs.
+- Reduced motion.
+- Descriptive error messages.
+- Touch-friendly controls.
+
+## **19. Analytics events**
+
+Track important business and admin actions.
+
+| Event               | Trigger            |
+| ------------------- | ------------------ |
+| `admin_login`       | Successful login   |
+| `admin_logout`      | Logout             |
+| `product_created`   | Product created    |
+| `product_updated`   | Product edited     |
+| `order_received`    | New order          |
+| `order_confirmed`   | Order confirmed    |
+| `order_completed`   | Order delivered    |
+| `payment_success`   | Successful payment |
+| `payment_failed`    | Failed payment     |
+| `coupon_created`    | Coupon created     |
+| `inventory_updated` | Stock changed      |
+| `cms_published`     | Website published  |
+
+Avoid sending passwords, payment credentials or unnecessary personal information into analytics.
+
+## **20. Component architecture**
+
+Recommended project structure:
+
+```
+src/
+├── app/
+│   ├── (public)/
+│   │   ├── page.tsx
+│   │   ├── menu/
+│   │   ├── contact/
+│   │   └── policies/
+│   │
+│   ├── (auth)/
+│   │   ├── admin-login/
+│   │   └── forgot-password/
+│   │
+│   ├── admin/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   ├── orders/
+│   │   ├── products/
+│   │   ├── categories/
+│   │   ├── inventory/
+│   │   ├── customers/
+│   │   ├── payments/
+│   │   ├── delivery/
+│   │   ├── coupons/
+│   │   ├── reviews/
+│   │   ├── cms/
+│   │   ├── analytics/
+│   │   ├── staff/
+│   │   └── settings/
+│   │
+│   └── api/
+│       ├── orders/
+│       ├── products/
+│       ├── payments/
+│       └── webhooks/
+│
+├── components/
+│   ├── admin/
+│   │   ├── sidebar/
+│   │   ├── header/
+│   │   ├── dashboard/
+│   │   ├── tables/
+│   │   └── forms/
+│   ├── ui/
+│   └── shared/
+│
+├── lib/
+│   ├── auth/
+│   ├── db/
+│   ├── permissions/
+│   ├── validations/
+│   ├── services/
+│   └── integrations/
+│
+├── hooks/
+├── types/
+├── constants/
+└── styles/
+```
+
+### **Architecture principles**
+
+- Server Components by default.
+- Client Components only when interaction is needed.
+- Centralized permission checks.
+- Reusable form components.
+- Separate business logic from UI.
+- Typed database queries.
+- Centralized error handling.
+- Server-side pagination and filtering.
+
+## **21. Database requirements**
+
+Recommended core tables:
+
+| Table              | Purpose                  |
+| ------------------ | ------------------------ |
+| profiles           | Admin and staff profiles |
+| roles              | User roles               |
+| permissions        | Permission definitions   |
+| role_permissions   | Role mapping             |
+| categories         | Product categories       |
+| products           | Menu products            |
+| product_images     | Product media            |
+| product_variants   | Product variations       |
+| inventory          | Stock records            |
+| stock_movements    | Stock history            |
+| customers          | Customer records         |
+| customer_addresses | Delivery addresses       |
+| orders             | Main order records       |
+| order_items        | Products in orders       |
+| payments           | Payment transactions     |
+| refunds            | Refund records           |
+| delivery_zones     | Delivery configuration   |
+| coupons            | Discount codes           |
+| coupon_usages      | Coupon history           |
+| reviews            | Customer reviews         |
+| banners            | Website banners          |
+| cms_pages          | Editable content         |
+| business_settings  | Café configuration       |
+| audit_logs         | Admin activity           |
+| notifications      | Dashboard notifications  |
+
+**Important database rules:**
+
+- Use UUID primary keys.
+- Use foreign key relationships.
+- Use decimal/numeric types for monetary values.
+- Store timestamps in UTC.
+- Add indexes to frequently queried columns.
+- Use transactions for order creation and payment-related operations.
+- Preserve historical order item prices.
+- Never permanently delete completed order records.
+
+## **22. Implementation phases**
+
+1. **Phase 1 – Foundation**
+   - Next.js setup.
+   - TypeScript configuration.
+   - Tailwind and UI library.
+   - Database connection.
+   - Authentication.
+2. **Phase 2 – Admin interface**
+   - Dashboard layout.
+   - Sidebar and header.
+   - Responsive design.
+   - Dashboard statistics.
+3. **Phase 3 – Core management**
+   - Products.
+   - Categories.
+   - Orders.
+   - Customers.
+   - Inventory.
+4. **Phase 4 – Commerce**
+   - Payment gateway.
+   - Delivery.
+   - Coupons.
+   - Refund management.
+5. **Phase 5 – Website CMS**
+   - Banner management.
+   - Gallery.
+   - Homepage content.
+   - SEO settings.
+6. **Phase 6 – Advanced features**
+   - Analytics.
+   - Staff permissions.
+   - Notifications.
+   - Audit logs.
+7. **Phase 7 – Testing and launch**
+   - Security testing.
+   - Performance optimization.
+   - Mobile testing.
+   - Production deployment.
+
+## **23. QA and launch checklist**
+
+**Launch readiness**
+
+# **0%**
+
+0 of 34 requirements completed
+
+**Authentication and security**
+
+Admin login and logout
+
+Password recovery
+
+Role-based permissions
+
+Protected admin routes
+
+API authorization
+
+Rate limiting
+
+Webhook verification
+
+**Dashboard and management**
+
+Dashboard statistics
+
+Product CRUD
+
+Category CRUD
+
+Order management
+
+Customer management
+
+Inventory management
+
+Staff permissions
+
+**Commerce**
+
+Payment gateway test
+
+Payment failure handling
+
+Refund workflow
+
+Coupon validation
+
+Delivery configuration
+
+Order confirmation notifications
+
+**Website and SEO**
+
+CMS publishing
+
+Responsive public website
+
+Metadata and Open Graph
+
+Sitemap and robots.txt
+
+LocalBusiness schema
+
+Privacy and terms pages
+
+Cookie consent
+
+**Quality and deployment**
+
+Mobile and tablet testing
+
+Keyboard accessibility
+
+Reduced motion testing
+
+Cross-browser testing
+
+Database backup verification
+
+Production environment variables
+
+Error monitoring
+
+Reset checklist
+
+## **24. Final production requirements**
+
+The finished admin panel must meet these conditions:
+
+1. The owner can manage the complete café website without developer intervention for routine content changes.
+2. Staff members only see and access their permitted modules.
+3. Orders and payment statuses remain synchronized.
+4. Product availability and stock are updated reliably.
+5. All sensitive operations are validated server-side.
+6. The interface works on desktop, tablet and mobile.
+7. Website changes can be previewed before publishing.
+8. Business analytics are based on actual database records.
+9. Backups and recovery procedures are established.
+10. The application is deployed securely on production infrastructure.
+
+## **25. Recommended development scope**
+
+I recommend dividing the project into two releases.
+
+| Release        | Included features                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------------ |
+| V1 – Essential | Authentication, dashboard, orders, products, categories, customers, payments, delivery, settings |
+| V2 – Advanced  | Inventory, staff roles, CMS, analytics, reviews, coupons, audit logs, advanced reporting         |
+
+This prevents the initial development from becoming unnecessarily complicated while keeping the architecture scalable.
+
+**One important architectural decision:** Build the admin panel as part of the same Next.js application as the café website, using separate public and admin route groups. This allows both to share the database, product data, authentication infrastructure and business settings.
+
+**Next step:** Finalize the café's order model (online ordering, pickup, delivery and payment methods), then convert this TRD into the exact PostgreSQL schema, Prisma models, API contracts and implementation-ready folder structure.

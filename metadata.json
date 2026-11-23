@@ -1,0 +1,6 @@
+{
+  "name": "Kova Studio Admin",
+  "description": "Operations admin panel for managing clothing business user accounts, customer loyalty tiers, and retail analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
