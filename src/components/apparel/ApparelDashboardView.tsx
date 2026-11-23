@@ -152,12 +152,12 @@ export function ApparelDashboardView({
           <button
             type="button"
             onClick={() => onNavigate('transactions')}
-            className="rounded-xl border border-slate-200 bg-white p-5 text-left hover:border-slate-400 dark:border-slate-800 dark:bg-[#111827] dark:hover:border-slate-600 transition-colors"
+            className="rounded-xl border border-line bg-surface p-5 text-left hover:border-accent/50 transition-colors"
           >
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+            <p className="text-xs font-medium text-ink-muted">
               Today&apos;s Net Revenue
             </p>
-            <p className="mt-1.5 font-mono text-2xl font-bold text-slate-900 dark:text-slate-50 tabular-nums">
+            <p className="mt-1.5 font-mono text-2xl font-bold text-ink tabular-nums">
               {formatInr(analytics.todayNet)}
             </p>
             <p className="mt-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-mono tabular-nums">
@@ -168,15 +168,15 @@ export function ApparelDashboardView({
           <button
             type="button"
             onClick={() => onNavigate('live_orders')}
-            className="rounded-xl border border-slate-200 bg-white p-5 text-left hover:border-slate-400 dark:border-slate-800 dark:bg-[#111827] dark:hover:border-slate-600 transition-colors"
+            className="rounded-xl border border-line bg-surface p-5 text-left hover:border-accent/50 transition-colors"
           >
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Avg Order Value & Fulfillment
+            <p className="text-xs font-medium text-ink-muted">
+              Avg Order Value &amp; Fulfillment
             </p>
-            <p className="mt-1.5 font-mono text-2xl font-bold text-slate-900 dark:text-slate-50 tabular-nums">
+            <p className="mt-1.5 font-mono text-2xl font-bold text-ink tabular-nums">
               {formatInr(analytics.aov)}
             </p>
-            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+            <p className="mt-1.5 text-xs text-ink-muted font-mono tabular-nums">
               Avg dispatch: {analytics.avgProcessingMins} mins · {analytics.cancellationRate.toFixed(1)}% cancel
             </p>
           </button>
@@ -184,15 +184,15 @@ export function ApparelDashboardView({
           <button
             type="button"
             onClick={() => onNavigate('transactions')}
-            className="rounded-xl border border-slate-200 bg-white p-5 text-left hover:border-slate-400 dark:border-slate-800 dark:bg-[#111827] dark:hover:border-slate-600 transition-colors"
+            className="rounded-xl border border-line bg-surface p-5 text-left hover:border-accent/50 transition-colors"
           >
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Pending Payments & Refunds
+            <p className="text-xs font-medium text-ink-muted">
+              Pending Payments &amp; Refunds
             </p>
             <p className="mt-1.5 font-mono text-2xl font-bold text-amber-700 dark:text-amber-400 tabular-nums">
               {formatInr(analytics.pendingAmount)}
             </p>
-            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+            <p className="mt-1.5 text-xs text-ink-muted font-mono tabular-nums">
               Refunds issued: {formatInr(analytics.totalRefunds)}
             </p>
           </button>
@@ -200,15 +200,15 @@ export function ApparelDashboardView({
           <button
             type="button"
             onClick={() => onNavigate('accounts')}
-            className="rounded-xl border border-slate-200 bg-white p-5 text-left hover:border-slate-400 dark:border-slate-800 dark:bg-[#111827] dark:hover:border-slate-600 transition-colors"
+            className="rounded-xl border border-line bg-surface p-5 text-left hover:border-accent/50 transition-colors"
           >
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              User Accounts & Top Method
+            <p className="text-xs font-medium text-ink-muted">
+              User Accounts &amp; Top Method
             </p>
-            <p className="mt-1.5 font-mono text-2xl font-bold text-slate-900 dark:text-slate-50 tabular-nums">
+            <p className="mt-1.5 font-mono text-2xl font-bold text-ink tabular-nums">
               {accounts.length} Accounts
             </p>
-            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+            <p className="mt-1.5 text-xs text-ink-muted font-mono tabular-nums">
               Top method: {analytics.mostUsedMethod} ({analytics.mostUsedCount} txns)
             </p>
           </button>
@@ -217,27 +217,27 @@ export function ApparelDashboardView({
 
       {/* Sales Trajectory + Apparel Stock Alerts */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <section className="lg:col-span-8 rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-[#111827]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
+        <section className="lg:col-span-8 rounded-xl border border-line bg-surface p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-line-subtle pb-4">
             <div>
-              <h2 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
+              <h2 className="font-display text-base font-semibold text-ink">
                 {salesView === 'daily' ? 'Apparel Sales by Day' : 'Apparel Sales by Month'}
               </h2>
               {activeBar && (
-                <p className="mt-0.5 font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+                <p className="mt-0.5 font-mono text-xs text-ink-muted tabular-nums">
                   {activeBar.label} · {formatInr(activeBar.revenue)} · {activeBar.orders} orders
                 </p>
               )}
             </div>
 
-            <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-800 self-start">
+            <div className="inline-flex items-center gap-1 rounded-lg bg-subtle p-1 self-start">
               <button
                 type="button"
                 onClick={() => setSalesView('daily')}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   salesView === 'daily'
-                    ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-900 dark:text-slate-100'
-                    : 'text-slate-600 dark:text-slate-400'
+                    ? 'bg-accent text-accent-ink shadow-xs'
+                    : 'text-ink-secondary hover:text-ink'
                 }`}
               >
                 By Day
@@ -247,8 +247,8 @@ export function ApparelDashboardView({
                 onClick={() => setSalesView('monthly')}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   salesView === 'monthly'
-                    ? 'bg-white text-slate-900 shadow-xs dark:bg-slate-900 dark:text-slate-100'
-                    : 'text-slate-600 dark:text-slate-400'
+                    ? 'bg-accent text-accent-ink shadow-xs'
+                    : 'text-ink-secondary hover:text-ink'
                 }`}
               >
                 By Month
@@ -272,14 +272,14 @@ export function ApparelDashboardView({
                       x2={chartW - padX}
                       y1={y}
                       y2={y}
-                      className="stroke-slate-100 dark:stroke-slate-800"
+                      className="stroke-line-subtle"
                       strokeWidth="1"
                     />
                     <text
                       x={padX - 8}
                       y={y + 3}
                       textAnchor="end"
-                      className="fill-slate-400 dark:fill-slate-500 text-[10px] font-mono tabular-nums"
+                      className="fill-ink-muted text-[10px] font-mono tabular-nums"
                     >
                       {formatInr(val, true)}
                     </text>
@@ -310,9 +310,7 @@ export function ApparelDashboardView({
                       height={barH}
                       rx={4}
                       className={
-                        selected
-                          ? 'fill-slate-900 dark:fill-slate-100'
-                          : 'fill-slate-400 dark:fill-slate-600'
+                        selected ? 'fill-accent transition-colors' : 'fill-chart-muted transition-colors'
                       }
                     />
                     <text
@@ -320,9 +318,7 @@ export function ApparelDashboardView({
                       y={chartH - 7}
                       textAnchor="middle"
                       className={`text-[10px] font-mono ${
-                        selected
-                          ? 'fill-slate-900 dark:fill-slate-100 font-semibold'
-                          : 'fill-slate-400 dark:fill-slate-500'
+                        selected ? 'fill-accent-text font-semibold' : 'fill-ink-muted'
                       }`}
                     >
                       {pt.label}
@@ -335,16 +331,16 @@ export function ApparelDashboardView({
         </section>
 
         {/* Low Stock SKU Alerts */}
-        <section className="lg:col-span-4 flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-[#111827]">
+        <section className="lg:col-span-4 flex flex-col justify-between rounded-xl border border-line bg-surface p-6">
           <div>
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 dark:border-slate-800">
-              <h2 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
+            <div className="flex items-center justify-between border-b border-line-subtle pb-4">
+              <h2 className="font-display text-base font-semibold text-ink">
                 Low-Stock Garment SKUs
               </h2>
               <button
                 type="button"
                 onClick={() => onNavigate('inventory')}
-                className="text-xs font-semibold text-slate-700 hover:text-slate-900 underline dark:text-slate-300"
+                className="text-xs font-semibold text-accent-text hover:underline"
               >
                 Manage Stock
               </button>
@@ -355,17 +351,17 @@ export function ApparelDashboardView({
                 All garment SKUs are adequately stocked.
               </p>
             ) : (
-              <div className="mt-4 divide-y divide-slate-100 dark:divide-slate-800">
+              <div className="mt-4 divide-y divide-line-subtle">
                 {lowStockItems.map((item) => (
                   <div
                     key={item.id}
                     className="py-2.5 flex items-center justify-between gap-2 text-xs"
                   >
                     <div className="min-w-0">
-                      <p className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                      <p className="font-medium text-ink truncate">
                         {item.name}
                       </p>
-                      <p className="font-mono text-[11px] text-slate-400">{item.sku}</p>
+                      <p className="font-mono text-[11px] text-ink-muted">{item.sku}</p>
                     </div>
                     <span className="font-mono font-semibold text-red-700 dark:text-red-400 shrink-0 tabular-nums">
                       {item.stockQuantity} left
@@ -376,16 +372,16 @@ export function ApparelDashboardView({
             )}
           </div>
 
-          <div className="mt-6 border-t border-slate-100 pt-4 space-y-2 text-xs dark:border-slate-800">
+          <div className="mt-6 border-t border-line-subtle pt-4 space-y-2 text-xs">
             <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">Total Cash Collected</span>
-              <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+              <span className="text-ink-muted">Total Cash Collected</span>
+              <span className="font-mono font-semibold text-ink tabular-nums">
                 {formatInr(analytics.totalCash)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500 dark:text-slate-400">Total Online Payments</span>
-              <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+              <span className="text-ink-muted">Total Online Payments</span>
+              <span className="font-mono font-semibold text-ink tabular-nums">
                 {formatInr(analytics.totalOnline)}
               </span>
             </div>
@@ -395,39 +391,39 @@ export function ApparelDashboardView({
 
       {/* Live Orders Snapshot & Recent Transactions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
-            <h2 className="font-display text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <section className="rounded-xl border border-line bg-surface overflow-hidden">
+          <div className="flex items-center justify-between border-b border-line-subtle px-5 py-3.5">
+            <h2 className="font-display text-sm font-semibold text-ink">
               Ongoing Apparel Orders
             </h2>
             <button
               type="button"
               onClick={() => onNavigate('live_orders')}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-slate-900 dark:text-slate-300"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-accent-text hover:underline"
             >
               <span>Live Orders Board</span>
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-line-subtle">
             {ongoingOrders.map((o) => (
               <button
                 key={o.id}
                 type="button"
                 onClick={() => onSelectOrder(o)}
-                className="w-full px-5 py-3 text-left flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                className="w-full px-5 py-3 text-left flex items-center justify-between gap-3 hover:bg-hover transition-colors"
               >
                 <div className="min-w-0">
-                  <p className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="font-mono text-xs font-semibold text-ink">
                     {o.orderNumber} · {o.customerName}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">
+                  <p className="mt-0.5 text-xs text-ink-secondary truncate">
                     {o.items.map((i) => `${i.quantity}× ${i.name} (${i.variant})`).join(', ')}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <OrderStatusText status={o.orderStatus} />
-                  <p className="mt-0.5 font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                  <p className="mt-0.5 font-mono text-xs font-semibold text-ink tabular-nums">
                     {formatInr(o.totalAmount)}
                   </p>
                 </div>
@@ -436,39 +432,39 @@ export function ApparelDashboardView({
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 dark:border-slate-800">
-            <h2 className="font-display text-sm font-semibold text-slate-900 dark:text-slate-100">
+        <section className="rounded-xl border border-line bg-surface overflow-hidden">
+          <div className="flex items-center justify-between border-b border-line-subtle px-5 py-3.5">
+            <h2 className="font-display text-sm font-semibold text-ink">
               Recent Transactions
             </h2>
             <button
               type="button"
               onClick={() => onNavigate('transactions')}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-slate-900 dark:text-slate-300"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-accent-text hover:underline"
             >
               <span>All Transactions</span>
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-line-subtle">
             {recentTx.map((tx) => (
               <button
                 key={tx.id}
                 type="button"
                 onClick={() => onSelectTransaction(tx)}
-                className="w-full px-5 py-3 text-left flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                className="w-full px-5 py-3 text-left flex items-center justify-between gap-3 hover:bg-hover transition-colors"
               >
                 <div className="min-w-0">
-                  <p className="font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">
+                  <p className="font-mono text-xs font-semibold text-ink">
                     {tx.id} · {tx.orderNumber}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-0.5 text-xs text-ink-secondary">
                     {tx.customerName} · {tx.paymentMethod} · {formatDateTime(tx.createdAt)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
                   <TransactionStatusText status={tx.status} />
-                  <p className="mt-0.5 font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                  <p className="mt-0.5 font-mono text-xs font-semibold text-ink tabular-nums">
                     {formatInr(tx.amount)}
                   </p>
                 </div>

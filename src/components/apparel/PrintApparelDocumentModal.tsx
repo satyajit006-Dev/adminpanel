@@ -30,17 +30,17 @@ export function PrintApparelDocumentModal({
         role="dialog"
         aria-modal="true"
         aria-label={isPackingSlip ? 'Warehouse Packing Slip' : 'Customer Tax Invoice'}
-        className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl overflow-hidden text-slate-900"
+        className="relative z-10 w-full max-w-md rounded-xl border border-line bg-surface shadow-2xl overflow-hidden text-ink"
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3 bg-slate-50">
-          <span className="text-xs font-semibold text-slate-800">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3 bg-subtle">
+          <span className="text-xs font-semibold text-ink">
             {isPackingSlip ? 'Warehouse Pick & Packing Slip' : 'Customer Tax Invoice'}
           </span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+              className="inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
             >
               <Printer className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Print</span>
@@ -49,7 +49,7 @@ export function PrintApparelDocumentModal({
               type="button"
               onClick={onClose}
               aria-label="Close print preview"
-              className="rounded-md p-1 text-slate-500 hover:bg-white hover:text-slate-900"
+              className="rounded-md p-1 text-ink-muted hover:bg-surface hover:text-ink"
             >
               <X className="h-4 w-4" />
             </button>

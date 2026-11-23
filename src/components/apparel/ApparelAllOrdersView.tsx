@@ -94,7 +94,7 @@ export function ApparelAllOrdersView({
         <div
           role="tablist"
           aria-label="Order history tabs"
-          className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-[#111827] self-start"
+          className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-line bg-surface p-1 self-start"
         >
           {tabs.map((t) => {
             const active = tab === t.id;
@@ -107,14 +107,14 @@ export function ApparelAllOrdersView({
                 onClick={() => setTab(t.id)}
                 className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
                   active
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                    ? 'bg-accent text-accent-ink'
+                    : 'text-ink-secondary hover:text-ink'
                 }`}
               >
                 <span>{t.label}</span>
                 <span
                   className={`font-mono text-[11px] tabular-nums ${
-                    active ? 'text-slate-300 dark:text-slate-600' : 'text-slate-400'
+                    active ? 'text-accent-ink/75' : 'text-ink-muted'
                   }`}
                 >
                   {counts[t.id]}
@@ -128,7 +128,7 @@ export function ApparelAllOrdersView({
           type="button"
           onClick={handleExport}
           disabled={filtered.length === 0}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-[#111827] dark:text-slate-200 whitespace-nowrap shrink-0 self-start"
+          className="inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2 text-xs font-semibold text-ink-secondary hover:bg-hover hover:text-ink disabled:opacity-50 whitespace-nowrap shrink-0 self-start transition-colors"
         >
           <Download className="h-3.5 w-3.5" aria-hidden="true" />
           <span>Export CSV</span>
@@ -138,7 +138,7 @@ export function ApparelAllOrdersView({
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
         <div className="sm:col-span-8 relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted"
             aria-hidden="true"
           />
           <input
@@ -147,14 +147,14 @@ export function ApparelAllOrdersView({
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by Order ID, customer, garment, or SKU..."
             aria-label="Search orders"
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-8 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none dark:border-slate-800 dark:bg-[#111827] dark:text-slate-100"
+            className="w-full rounded-lg border border-line bg-surface py-2 pl-9 pr-8 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch('')}
               aria-label="Clear search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -166,7 +166,7 @@ export function ApparelAllOrdersView({
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as OrderType | 'All')}
             aria-label="Filter by fulfillment type"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-900 focus:outline-none dark:border-slate-800 dark:bg-[#111827] dark:text-slate-200"
+            className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink-secondary focus:border-accent focus:outline-none"
           >
             <option value="All">All Fulfillment Types</option>
             <option value="Delivery">Delivery</option>
@@ -175,13 +175,13 @@ export function ApparelAllOrdersView({
         </div>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
+      <section className="rounded-xl border border-line bg-surface overflow-hidden">
         {filtered.length === 0 ? (
           <div className="px-6 py-14 text-center">
-            <p className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
+            <p className="font-display text-base font-semibold text-ink">
               No orders found
             </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-ink-muted">
               Try clearing your search or switching to another order tab.
             </p>
           </div>
@@ -189,7 +189,7 @@ export function ApparelAllOrdersView({
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
+                <tr className="border-b border-line bg-subtle text-xs font-medium text-ink-muted">
                   <th className="py-3 pl-5 pr-3 whitespace-nowrap">Order ID</th>
                   <th className="py-3 px-3 whitespace-nowrap">Customer</th>
                   <th className="py-3 px-3">Garments</th>
@@ -201,26 +201,26 @@ export function ApparelAllOrdersView({
                   <th className="py-3 pl-3 pr-5 text-right whitespace-nowrap">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+              <tbody className="divide-y divide-line-subtle text-sm">
                 {filtered.map((order) => (
                   <tr
                     key={order.id}
                     onClick={() => onSelectOrder(order)}
-                    className="cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                    className="cursor-pointer hover:bg-hover transition-colors"
                   >
-                    <td className="py-3 pl-5 pr-3 font-mono text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                    <td className="py-3 pl-5 pr-3 font-mono text-xs font-bold text-ink whitespace-nowrap">
                       {order.orderNumber}
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
-                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                      <p className="text-xs font-semibold text-ink">
                         {order.customerName}
                       </p>
-                      <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                      <p className="font-mono text-[11px] text-ink-muted">
                         {order.customerPhone}
                       </p>
                     </td>
                     <td className="py-3 px-3 max-w-[270px]">
-                      <p className="text-xs text-slate-900 dark:text-slate-100 truncate">
+                      <p className="text-xs text-ink truncate">
                         {order.items
                           .map((i) => `${i.quantity}× ${i.name} (${i.variant})`)
                           .join(', ')}
@@ -231,22 +231,22 @@ export function ApparelAllOrdersView({
                         </p>
                       )}
                     </td>
-                    <td className="py-3 px-3 text-right font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 tabular-nums whitespace-nowrap">
+                    <td className="py-3 px-3 text-right font-mono text-xs font-semibold text-ink tabular-nums whitespace-nowrap">
                       {formatInr(order.totalAmount)}
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
                       <PaymentStateText state={order.paymentStatus} />
-                      <span className="block text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="block text-[11px] text-ink-muted">
                         {order.paymentMethod}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    <td className="py-3 px-3 text-xs text-ink-secondary whitespace-nowrap">
                       {order.orderType}
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
                       <OrderStatusText status={order.orderStatus} />
                     </td>
-                    <td className="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap tabular-nums">
+                    <td className="py-3 px-3 font-mono text-xs text-ink-muted whitespace-nowrap tabular-nums">
                       {formatDateTime(order.createdAt)}
                     </td>
                     <td className="py-3 pl-3 pr-5 text-right whitespace-nowrap">
@@ -256,7 +256,7 @@ export function ApparelAllOrdersView({
                           e.stopPropagation();
                           onSelectOrder(order);
                         }}
-                        className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                        className="rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
                       >
                         Inspect
                       </button>

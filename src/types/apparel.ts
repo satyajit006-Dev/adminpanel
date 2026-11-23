@@ -15,6 +15,8 @@ export type ApparelRoute =
   | 'staff'
   | 'settings';
 
+export type ThemePreset = 'indigo' | 'pine' | 'burgundy' | 'slate';
+
 export type OrderStatus =
   | 'new_order'
   | 'confirmed'

@@ -123,13 +123,13 @@ export function ApparelSidebar({
   };
 
   const sidebarBody = (
-    <div className="flex h-full flex-col bg-[#0F172A] text-slate-100 border-r border-slate-800">
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-ink border-r border-sidebar-border transition-colors duration-200">
       {/* Brand Header */}
-      <div className="flex h-16 items-center justify-between px-5 border-b border-slate-800 shrink-0">
+      <div className="flex h-16 items-center justify-between px-5 border-b border-sidebar-border shrink-0">
         <button
           type="button"
           onClick={() => handleSelect('dashboard')}
-          className="font-display text-lg font-bold tracking-tight text-white whitespace-nowrap shrink-0 text-left"
+          className="font-display text-lg font-bold tracking-tight text-sidebar-ink whitespace-nowrap shrink-0 text-left"
         >
           {brandName}
         </button>
@@ -137,7 +137,7 @@ export function ApparelSidebar({
           type="button"
           onClick={onCloseMobile}
           aria-label="Close navigation menu"
-          className="lg:hidden rounded-md p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+          className="lg:hidden rounded-md p-1.5 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink"
         >
           <X className="h-5 w-5" />
         </button>
@@ -147,7 +147,7 @@ export function ApparelSidebar({
       <nav aria-label="Primary Admin Navigation" className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         {groups.map((group) => (
           <div key={group.heading}>
-            <p className="px-3 mb-2 text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+            <p className="px-3 mb-2 text-[11px] font-semibold tracking-wider text-sidebar-muted uppercase">
               {group.heading}
             </p>
             <div className="space-y-0.5">
@@ -161,14 +161,14 @@ export function ApparelSidebar({
                     onClick={() => handleSelect(item.id)}
                     className={`w-full flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap ${
                       active
-                        ? 'bg-white text-slate-900'
-                        : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                        ? 'bg-sidebar-active text-sidebar-active-ink shadow-xs'
+                        : 'text-sidebar-ink/85 hover:bg-sidebar-hover hover:text-sidebar-ink'
                     }`}
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
                       <Icon
                         className={`h-4 w-4 shrink-0 ${
-                          active ? 'text-slate-900' : 'text-slate-400'
+                          active ? 'text-sidebar-active-ink' : 'text-sidebar-muted'
                         }`}
                         aria-hidden="true"
                       />
@@ -179,7 +179,7 @@ export function ApparelSidebar({
                       {item.isLive && (
                         <span
                           className={`text-[10px] font-mono ${
-                            active ? 'text-emerald-700 font-semibold' : 'text-emerald-400'
+                            active ? 'text-sidebar-active-muted font-semibold' : 'text-emerald-400'
                           }`}
                         >
                           {realtimeConnected ? 'Live' : 'Paused'}
@@ -188,7 +188,7 @@ export function ApparelSidebar({
                       {item.badge !== undefined && (
                         <span
                           className={`font-mono text-[11px] tabular-nums ${
-                            active ? 'text-slate-600' : 'text-slate-400'
+                            active ? 'text-sidebar-active-muted' : 'text-sidebar-muted'
                           }`}
                         >
                           {item.badge}
@@ -204,7 +204,7 @@ export function ApparelSidebar({
       </nav>
 
       {/* Operator Footer */}
-      <div className="border-t border-slate-800 px-5 py-3.5 shrink-0">
+      <div className="border-t border-sidebar-border px-5 py-3.5 shrink-0">
         <div className="flex items-center gap-3">
           <Avatar
             name="Claire Vance"
@@ -212,8 +212,8 @@ export function ApparelSidebar({
             size="sm"
           />
           <div className="min-w-0">
-            <p className="truncate text-xs font-semibold text-white">Claire Vance</p>
-            <p className="truncate text-[11px] text-slate-400">Operations Admin · Apparel</p>
+            <p className="truncate text-xs font-semibold text-sidebar-ink">Claire Vance</p>
+            <p className="truncate text-[11px] text-sidebar-muted">Operations Admin · Apparel</p>
           </div>
         </div>
       </div>

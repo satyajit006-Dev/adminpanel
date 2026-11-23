@@ -143,14 +143,14 @@ export function ApparelLiveOrdersView({
             className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
               realtimeEnabled
                 ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400'
-                : 'border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-[#111827] dark:text-slate-400'
+                : 'border-line bg-surface text-ink-secondary'
             }`}
           >
             <Radio className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>Realtime Feed: {realtimeEnabled ? 'Active' : 'Paused'}</span>
           </button>
 
-          <span className="font-mono text-xs text-slate-500 dark:text-slate-400 tabular-nums">
+          <span className="font-mono text-xs text-ink-muted tabular-nums">
             {ongoingOrders.length} active order{ongoingOrders.length === 1 ? '' : 's'}
           </span>
         </div>
@@ -158,7 +158,7 @@ export function ApparelLiveOrdersView({
         <div className="flex items-center gap-2">
           <div className="relative w-full sm:w-64">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"
+              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted"
               aria-hidden="true"
             />
             <input
@@ -167,14 +167,14 @@ export function ApparelLiveOrdersView({
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search order ID, garment, SKU..."
               aria-label="Search live orders"
-              className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-3 text-xs text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none dark:border-slate-800 dark:bg-[#111827] dark:text-slate-100"
+              className="w-full rounded-lg border border-line bg-surface py-1.5 pl-8 pr-3 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
             />
           </div>
 
           <button
             type="button"
             onClick={onSimulateOrder}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink hover:bg-accent-hover whitespace-nowrap shrink-0 transition-colors"
           >
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
             <span>Incoming Order</span>
@@ -196,24 +196,24 @@ export function ApparelLiveOrdersView({
                 }
                 className={`rounded-xl border p-5 text-left transition-colors ${
                   selected
-                    ? 'border-slate-900 bg-slate-100/70 dark:border-slate-200 dark:bg-slate-800/70'
-                    : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-[#111827] dark:hover:border-slate-700'
+                    ? 'border-accent bg-accent-soft'
+                    : 'border-line bg-surface hover:border-accent/50'
                 }`}
               >
                 <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                  <span className="text-xs font-semibold text-ink">
                     {card.label}
                   </span>
                   {selected && (
-                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                    <span className="text-[11px] font-medium text-accent-text">
                       Filtered
                     </span>
                   )}
                 </div>
-                <p className="mt-2 font-mono text-3xl font-bold text-slate-900 dark:text-slate-50 tabular-nums">
+                <p className="mt-2 font-mono text-3xl font-bold text-ink tabular-nums">
                   {card.count}
                 </p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-ink-muted">
                   {card.subtitle}
                 </p>
               </button>
@@ -223,22 +223,22 @@ export function ApparelLiveOrdersView({
       </section>
 
       {/* Ongoing Orders Table */}
-      <section className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
+      <section className="rounded-xl border border-line bg-surface overflow-hidden">
         {filtered.length === 0 ? (
           <div className="px-6 py-16 text-center">
-            <p className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
+            <p className="font-display text-base font-semibold text-ink">
               {stageFilter === 'all'
                 ? 'No ongoing orders in fulfillment'
                 : 'No ongoing orders in this stage'}
             </p>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-ink-muted">
               New clothing orders will appear here in real time as customers check out.
             </p>
             {stageFilter !== 'all' && (
               <button
                 type="button"
                 onClick={() => setStageFilter('all')}
-                className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
+                className="mt-4 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover"
               >
                 Show All Ongoing Orders
               </button>
@@ -248,10 +248,10 @@ export function ApparelLiveOrdersView({
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
+                <tr className="border-b border-line bg-subtle text-xs font-medium text-ink-muted">
                   <th className="py-3 pl-5 pr-3 whitespace-nowrap">Order ID</th>
                   <th className="py-3 px-3 whitespace-nowrap">Customer</th>
-                  <th className="py-3 px-3">Garments & Sizes</th>
+                  <th className="py-3 px-3">Garments &amp; Sizes</th>
                   <th className="py-3 px-3 text-right whitespace-nowrap">Order Amount</th>
                   <th className="py-3 px-3 whitespace-nowrap">Payment</th>
                   <th className="py-3 px-3 whitespace-nowrap">Type</th>
@@ -260,18 +260,18 @@ export function ApparelLiveOrdersView({
                   <th className="py-3 pl-3 pr-5 text-right whitespace-nowrap">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+              <tbody className="divide-y divide-line-subtle text-sm">
                 {filtered.map((order) => {
                   const elapsed = getMinutesElapsed(order.createdAt, nowMs);
                   const nextStep = getNextWorkflowStep(order);
                   return (
                     <tr
                       key={order.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                      className="hover:bg-hover transition-colors"
                     >
                       <td
                         onClick={() => onSelectOrder(order)}
-                        className="py-3.5 pl-5 pr-3 font-mono text-xs font-bold text-slate-900 dark:text-slate-100 cursor-pointer whitespace-nowrap"
+                        className="py-3.5 pl-5 pr-3 font-mono text-xs font-bold text-ink cursor-pointer whitespace-nowrap"
                       >
                         {order.orderNumber}
                       </td>
@@ -279,10 +279,10 @@ export function ApparelLiveOrdersView({
                         onClick={() => onSelectOrder(order)}
                         className="py-3.5 px-3 cursor-pointer whitespace-nowrap"
                       >
-                        <p className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                        <p className="text-xs font-semibold text-ink">
                           {order.customerName}
                         </p>
-                        <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                        <p className="font-mono text-[11px] text-ink-muted">
                           {order.customerPhone}
                         </p>
                       </td>
@@ -290,41 +290,41 @@ export function ApparelLiveOrdersView({
                         onClick={() => onSelectOrder(order)}
                         className="py-3.5 px-3 cursor-pointer max-w-[270px]"
                       >
-                        <p className="text-xs text-slate-900 dark:text-slate-100 truncate">
+                        <p className="text-xs text-ink truncate">
                           {order.items
                             .map((i) => `${i.quantity}× ${i.name} (${i.variant})`)
                             .join(', ')}
                         </p>
                         {order.customerInstructions && (
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          <p className="text-[11px] text-ink-muted truncate">
                             Note: {order.customerInstructions}
                           </p>
                         )}
                       </td>
-                      <td className="py-3.5 px-3 text-right font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 tabular-nums whitespace-nowrap">
+                      <td className="py-3.5 px-3 text-right font-mono text-xs font-semibold text-ink tabular-nums whitespace-nowrap">
                         {formatInr(order.totalAmount)}
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         <PaymentStateText state={order.paymentStatus} />
-                        <span className="block text-[11px] text-slate-500 dark:text-slate-400">
+                        <span className="block text-[11px] text-ink-muted">
                           {order.paymentMethod}
                         </span>
                       </td>
-                      <td className="py-3.5 px-3 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                      <td className="py-3.5 px-3 text-xs font-medium text-ink-secondary whitespace-nowrap">
                         {order.orderType}
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         <OrderStatusText status={order.orderStatus} />
                       </td>
                       <td className="py-3.5 px-3 font-mono text-xs whitespace-nowrap tabular-nums">
-                        <span className="block text-slate-900 dark:text-slate-100">
+                        <span className="block text-ink">
                           {formatTimeOnly(order.createdAt)}
                         </span>
                         <span
                           className={`text-[11px] ${
                             elapsed >= 45
                               ? 'font-semibold text-red-700 dark:text-red-400'
-                              : 'text-slate-500 dark:text-slate-400'
+                              : 'text-ink-muted'
                           }`}
                         >
                           {elapsed}m elapsed
@@ -336,7 +336,7 @@ export function ApparelLiveOrdersView({
                             <button
                               type="button"
                               onClick={() => onAdvanceOrderStatus(order, nextStep.next)}
-                              className="rounded-md bg-slate-900 px-2.5 py-1 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+                              className="rounded-md bg-accent px-2.5 py-1 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
                             >
                               {nextStep.label}
                             </button>
@@ -344,7 +344,7 @@ export function ApparelLiveOrdersView({
                           <button
                             type="button"
                             onClick={() => onSelectOrder(order)}
-                            className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                            className="rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
                           >
                             View
                           </button>

@@ -177,9 +177,9 @@ export function ApparelTransactionsView({
               key={card.label}
               type="button"
               onClick={card.onClick}
-              className="rounded-xl border border-slate-200 bg-white p-4 text-left hover:border-slate-400 dark:border-slate-800 dark:bg-[#111827] dark:hover:border-slate-600 transition-colors"
+              className="rounded-xl border border-line bg-surface p-4 text-left hover:border-accent/50 transition-colors"
             >
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              <p className="text-xs font-medium text-ink-muted">
                 {card.label}
               </p>
               <p
@@ -190,12 +190,12 @@ export function ApparelTransactionsView({
                       ? 'text-amber-700 dark:text-amber-400'
                       : card.tone === 'red'
                         ? 'text-red-700 dark:text-red-400'
-                        : 'text-slate-900 dark:text-slate-50'
+                        : 'text-ink'
                 }`}
               >
                 {card.value}
               </p>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="mt-1 text-[11px] text-ink-muted">
                 {card.sub}
               </p>
             </button>
@@ -205,7 +205,7 @@ export function ApparelTransactionsView({
 
       {/* Filters & CSV Export */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-[#111827] self-start">
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-line bg-surface p-1 self-start">
           {(
             [
               { id: 'all', label: 'All' },
@@ -223,8 +223,8 @@ export function ApparelTransactionsView({
                 onClick={() => setStatusFilter(item.id)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
                   active
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                    ? 'bg-accent text-accent-ink'
+                    : 'text-ink-secondary hover:text-ink'
                 }`}
               >
                 {item.label}
@@ -238,7 +238,7 @@ export function ApparelTransactionsView({
             type="button"
             onClick={handleExport}
             disabled={filtered.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-[#111827] dark:text-slate-200 whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3.5 py-2 text-xs font-semibold text-ink-secondary hover:bg-hover hover:text-ink disabled:opacity-50 whitespace-nowrap transition-colors"
           >
             <Download className="h-3.5 w-3.5" aria-hidden="true" />
             <span>Export CSV</span>
@@ -250,7 +250,7 @@ export function ApparelTransactionsView({
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
         <div className="sm:col-span-6 relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted"
             aria-hidden="true"
           />
           <input
@@ -259,14 +259,14 @@ export function ApparelTransactionsView({
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by Transaction ID, Order ID, customer, or gateway ref..."
             aria-label="Search transactions"
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-8 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none dark:border-slate-800 dark:bg-[#111827] dark:text-slate-100"
+            className="w-full rounded-lg border border-line bg-surface py-2 pl-9 pr-8 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
               aria-label="Clear transaction search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -278,7 +278,7 @@ export function ApparelTransactionsView({
             value={methodFilter}
             onChange={(e) => setMethodFilter(e.target.value as MethodFilter)}
             aria-label="Filter by payment method"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-900 focus:outline-none dark:border-slate-800 dark:bg-[#111827] dark:text-slate-200"
+            className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink-secondary focus:border-accent focus:outline-none"
           >
             <option value="all">All Payment Methods</option>
             <option value="UPI">UPI</option>
@@ -293,7 +293,7 @@ export function ApparelTransactionsView({
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as DateFilter)}
             aria-label="Filter by date range"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-900 focus:outline-none dark:border-slate-800 dark:bg-[#111827] dark:text-slate-200"
+            className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink-secondary focus:border-accent focus:outline-none"
           >
             <option value="all">All Time</option>
             <option value="today">Today</option>
@@ -304,16 +304,16 @@ export function ApparelTransactionsView({
       </div>
 
       {/* Transaction History Table */}
-      <section className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
+      <section className="rounded-xl border border-line bg-surface overflow-hidden">
         {filtered.length === 0 ? (
           <div className="px-6 py-14 text-center">
-            <p className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
+            <p className="font-display text-base font-semibold text-ink">
               No transactions match your filters
             </p>
             <button
               type="button"
               onClick={resetFilters}
-              className="mt-3 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
+              className="mt-3 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover"
             >
               Reset Filters
             </button>
@@ -322,7 +322,7 @@ export function ApparelTransactionsView({
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
+                <tr className="border-b border-line bg-subtle text-xs font-medium text-ink-muted">
                   <th className="py-3 pl-5 pr-3 whitespace-nowrap">Transaction ID</th>
                   <th className="py-3 px-3 whitespace-nowrap">Order ID</th>
                   <th className="py-3 px-3 whitespace-nowrap">Customer</th>
@@ -334,34 +334,34 @@ export function ApparelTransactionsView({
                   <th className="py-3 pl-3 pr-5 text-right whitespace-nowrap">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+              <tbody className="divide-y divide-line-subtle text-sm">
                 {filtered.map((tx) => (
                   <tr
                     key={tx.id}
-                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                    className="hover:bg-hover transition-colors"
                   >
-                    <td className="py-3 pl-5 pr-3 font-mono text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                    <td className="py-3 pl-5 pr-3 font-mono text-xs font-bold text-ink whitespace-nowrap">
                       {tx.id}
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => onSelectOrderById(tx.orderId)}
-                        className="font-mono text-xs font-semibold text-slate-800 hover:underline dark:text-slate-200"
+                        className="font-mono text-xs font-semibold text-accent-text hover:underline"
                       >
                         {tx.orderNumber}
                       </button>
                     </td>
-                    <td className="py-3 px-3 text-xs font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap">
+                    <td className="py-3 px-3 text-xs font-medium text-ink whitespace-nowrap">
                       {tx.customerName}
                     </td>
-                    <td className="py-3 px-3 text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                    <td className="py-3 px-3 text-xs text-ink-secondary whitespace-nowrap">
                       {tx.paymentMethod}
                     </td>
-                    <td className="py-3 px-3 text-right font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 tabular-nums whitespace-nowrap">
+                    <td className="py-3 px-3 text-right font-mono text-xs font-semibold text-ink tabular-nums whitespace-nowrap">
                       {formatInr(tx.amount)}
                       {tx.refundedAmount > 0 && (
-                        <span className="block text-[10px] font-normal text-slate-500 dark:text-slate-400">
+                        <span className="block text-[10px] font-normal text-ink-muted">
                           -{formatInr(tx.refundedAmount)} refunded
                         </span>
                       )}
@@ -369,17 +369,17 @@ export function ApparelTransactionsView({
                     <td className="py-3 px-3 whitespace-nowrap">
                       <TransactionStatusText status={tx.status} />
                     </td>
-                    <td className="py-3 px-3 font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap tabular-nums">
+                    <td className="py-3 px-3 font-mono text-xs text-ink-muted whitespace-nowrap tabular-nums">
                       {formatDateTime(tx.createdAt)}
                     </td>
-                    <td className="py-3 px-3 font-mono text-xs text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                    <td className="py-3 px-3 font-mono text-xs text-ink-secondary whitespace-nowrap">
                       {tx.gatewayReference ?? '—'}
                     </td>
                     <td className="py-3 pl-3 pr-5 text-right whitespace-nowrap">
                       <button
                         type="button"
                         onClick={() => onSelectTransaction(tx)}
-                        className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                        className="rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
                       >
                         View Details
                       </button>

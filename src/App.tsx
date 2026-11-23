@@ -66,6 +66,7 @@ import type {
   RefundRecord,
   ShippingZone,
   StaffMember,
+  ThemePreset,
   Transaction,
   UserAccount,
 } from './types/apparel';
@@ -113,6 +114,17 @@ export default function App() {
       return localStorage.getItem(STORAGE_PREFIX + 'theme') === 'dark';
     } catch {
       return false;
+    }
+  });
+  const [themePreset, setThemePreset] = useState<ThemePreset>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_PREFIX + 'theme_preset');
+      if (saved === 'indigo' || saved === 'pine' || saved === 'burgundy' || saved === 'slate') {
+        return saved;
+      }
+      return 'indigo';
+    } catch {
+      return 'indigo';
     }
   });
 
@@ -199,6 +211,11 @@ export default function App() {
     document.documentElement.classList.toggle('dark', isDark);
     saveState('theme', isDark ? 'dark' : 'light');
   }, [isDark]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = themePreset;
+    saveState('theme_preset', themePreset);
+  }, [themePreset]);
 
   useEffect(() => saveState('accounts', accounts), [accounts]);
   useEffect(() => saveState('orders', orders), [orders]);
@@ -675,7 +692,7 @@ export default function App() {
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId) ?? null;
 
   return (
-    <div className="min-h-screen flex bg-slate-50 text-slate-900 dark:bg-[#0B0F17] dark:text-slate-100">
+    <div className="min-h-screen flex bg-canvas text-ink transition-colors duration-200">
       <ApparelSidebar
         activeRoute={activeRoute}
         onSelectRoute={setActiveRoute}
@@ -694,6 +711,11 @@ export default function App() {
           activeRoute={activeRoute}
           isDark={isDark}
           onToggleTheme={() => setIsDark((p) => !p)}
+          themePreset={themePreset}
+          onChangeThemePreset={(next) => {
+            setThemePreset(next);
+            notify(`Switched theme to ${next === 'indigo' ? 'Midnight Indigo' : next === 'pine' ? 'Pine Atelier' : next === 'burgundy' ? 'Oxblood Couture' : 'Classic Slate'}`);
+          }}
           onOpenMobileMenu={() => setMobileOpen(true)}
           onSimulateIncomingOrder={handleSimulateIncomingOrder}
           onOpenNewAccount={() => setCreateAccountOpen(true)}
@@ -873,6 +895,13 @@ export default function App() {
           {activeRoute === 'settings' && (
             <ApparelSettingsView
               settings={settings}
+              themePreset={themePreset}
+              isDark={isDark}
+              onChangeThemePreset={(next) => {
+                setThemePreset(next);
+                notify(`Switched theme to ${next === 'indigo' ? 'Midnight Indigo' : next === 'pine' ? 'Pine Atelier' : next === 'burgundy' ? 'Oxblood Couture' : 'Classic Slate'}`);
+              }}
+              onToggleDark={() => setIsDark((p) => !p)}
               onSaveSettings={(next) => {
                 setSettings(next);
                 notify('Saved Kova Studio apparel settings');

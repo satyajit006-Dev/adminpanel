@@ -142,7 +142,7 @@ export function ApparelAccountsView({
         <div
           role="tablist"
           aria-label="Account segments"
-          className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-[#111827] self-start"
+          className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-line bg-surface p-1 self-start"
         >
           {(['All', 'Customer', 'Wholesale', 'Staff'] as const).map((seg) => {
             const active = segmentFilter === seg;
@@ -155,14 +155,14 @@ export function ApparelAccountsView({
                 onClick={() => setSegmentFilter(seg)}
                 className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap shrink-0 ${
                   active
-                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
-                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100'
+                    ? 'bg-accent text-accent-ink'
+                    : 'text-ink-secondary hover:text-ink'
                 }`}
               >
                 <span>{seg === 'All' ? 'All Accounts' : `${seg}s`.replace('Staffs', 'Staff')}</span>
                 <span
                   className={`font-mono text-[11px] tabular-nums ${
-                    active ? 'text-slate-300 dark:text-slate-600' : 'text-slate-400'
+                    active ? 'text-accent-ink/75' : 'text-ink-muted'
                   }`}
                 >
                   {segmentCounts[seg]}
@@ -177,7 +177,7 @@ export function ApparelAccountsView({
             type="button"
             onClick={handleExportFiltered}
             disabled={filteredAccounts.length === 0}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-[#111827] dark:text-slate-200 dark:hover:bg-slate-800 whitespace-nowrap"
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-surface px-3.5 py-2 text-xs font-medium text-ink-secondary hover:bg-hover disabled:opacity-50 whitespace-nowrap transition-colors"
           >
             <Download className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>Export CSV</span>
@@ -185,7 +185,7 @@ export function ApparelAccountsView({
           <button
             type="button"
             onClick={onOpenNewAccount}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 whitespace-nowrap"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover whitespace-nowrap transition-colors"
           >
             <UserPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>New Account</span>
@@ -196,7 +196,7 @@ export function ApparelAccountsView({
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
         <div className="sm:col-span-6 relative">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted"
             aria-hidden="true"
           />
           <input
@@ -205,14 +205,14 @@ export function ApparelAccountsView({
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by name, email, account ID, boutique, or city..."
             aria-label="Search user accounts"
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-9 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:outline-none dark:border-slate-800 dark:bg-[#111827] dark:text-slate-100"
+            className="w-full rounded-lg border border-line bg-surface py-2 pl-9 pr-9 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
               aria-label="Clear search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-700"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-muted hover:text-ink"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -224,7 +224,7 @@ export function ApparelAccountsView({
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as AccountStatus | 'All')}
             aria-label="Filter by account status"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-900 focus:outline-none dark:border-slate-800 dark:bg-[#111827] dark:text-slate-200"
+            className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink-secondary focus:border-accent focus:outline-none"
           >
             <option value="All">All Statuses</option>
             <option value="Active">Active</option>
@@ -238,7 +238,7 @@ export function ApparelAccountsView({
             value={tierFilter}
             onChange={(e) => setTierFilter(e.target.value as LoyaltyTier | 'All')}
             aria-label="Filter by loyalty tier"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-900 focus:outline-none dark:border-slate-800 dark:bg-[#111827] dark:text-slate-200"
+            className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink-secondary focus:border-accent focus:outline-none"
           >
             <option value="All">All Tiers</option>
             <option value="Atelier VIP">Atelier VIP</option>
@@ -252,8 +252,8 @@ export function ApparelAccountsView({
       </div>
 
       {selectedIds.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-300 bg-slate-100 px-4 py-2.5 dark:border-slate-700 dark:bg-slate-800/80">
-          <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 font-mono tabular-nums">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/25 bg-accent-soft px-4 py-2.5">
+          <span className="text-xs font-semibold text-accent-text font-mono tabular-nums">
             {selectedIds.length} account{selectedIds.length > 1 ? 's' : ''} selected
           </span>
           <div className="flex flex-wrap items-center gap-2">
@@ -263,7 +263,7 @@ export function ApparelAccountsView({
                 onBulkUpdateStatus(selectedIds, 'Active');
                 setSelectedIds([]);
               }}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 whitespace-nowrap"
+              className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-hover whitespace-nowrap transition-colors"
             >
               Activate
             </button>
@@ -273,7 +273,7 @@ export function ApparelAccountsView({
                 onBulkUpdateStatus(selectedIds, 'Suspended');
                 setSelectedIds([]);
               }}
-              className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:bg-slate-900 dark:text-red-400 whitespace-nowrap"
+              className="rounded-md border border-red-200 bg-surface px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/40 whitespace-nowrap transition-colors"
             >
               Suspend
             </button>
@@ -283,21 +283,21 @@ export function ApparelAccountsView({
                 onBulkUpdateTier(selectedIds, 'Atelier VIP');
                 setSelectedIds([]);
               }}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 whitespace-nowrap"
+              className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-hover whitespace-nowrap transition-colors"
             >
               Grant Atelier VIP
             </button>
             <button
               type="button"
               onClick={handleExportSelected}
-              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 whitespace-nowrap"
+              className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink hover:bg-hover whitespace-nowrap transition-colors"
             >
               Export Selected
             </button>
             <button
               type="button"
               onClick={() => setSelectedIds([])}
-              className="px-2 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 whitespace-nowrap"
+              className="px-2 py-1.5 text-xs font-medium text-ink-muted hover:text-ink whitespace-nowrap transition-colors"
             >
               Clear
             </button>
@@ -305,19 +305,19 @@ export function ApparelAccountsView({
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
+      <div className="rounded-xl border border-line bg-surface overflow-hidden">
         {filteredAccounts.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <p className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
+            <p className="font-display text-base font-semibold text-ink">
               No matching accounts found
             </p>
-            <p className="mt-1 max-w-md text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 max-w-md text-sm text-ink-muted">
               No customer, wholesale, or staff accounts match your current search or filter criteria.
             </p>
             <button
               type="button"
               onClick={resetFilters}
-              className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
+              className="mt-4 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
             >
               Reset Filters
             </button>
@@ -326,21 +326,21 @@ export function ApparelAccountsView({
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
+                <tr className="border-b border-line bg-subtle/70 text-xs font-medium text-ink-muted">
                   <th className="w-10 py-3 pl-5 pr-2">
                     <input
                       type="checkbox"
                       checked={allVisibleSelected}
                       onChange={toggleSelectAll}
                       aria-label="Select all visible accounts"
-                      className="h-4 w-4 rounded border-slate-300 text-slate-900 dark:border-slate-700 dark:bg-slate-900"
+                      className="h-4 w-4 rounded border-line bg-surface text-accent accent-accent"
                     />
                   </th>
                   <th className="py-3 px-3">
                     <button
                       type="button"
                       onClick={() => toggleSort('fullName')}
-                      className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100 whitespace-nowrap"
+                      className="inline-flex items-center gap-1 hover:text-ink whitespace-nowrap"
                     >
                       <span>Account</span>
                       <ArrowUpDown className="h-3 w-3" aria-hidden="true" />
@@ -352,7 +352,7 @@ export function ApparelAccountsView({
                     <button
                       type="button"
                       onClick={() => toggleSort('totalOrders')}
-                      className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100 whitespace-nowrap"
+                      className="inline-flex items-center gap-1 hover:text-ink whitespace-nowrap"
                     >
                       <span>Orders</span>
                       <ArrowUpDown className="h-3 w-3" aria-hidden="true" />
@@ -362,7 +362,7 @@ export function ApparelAccountsView({
                     <button
                       type="button"
                       onClick={() => toggleSort('lifetimeSpend')}
-                      className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100 whitespace-nowrap"
+                      className="inline-flex items-center gap-1 hover:text-ink whitespace-nowrap"
                     >
                       <span>Lifetime Spend</span>
                       <ArrowUpDown className="h-3 w-3" aria-hidden="true" />
@@ -372,7 +372,7 @@ export function ApparelAccountsView({
                     <button
                       type="button"
                       onClick={() => toggleSort('returnRate')}
-                      className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100 whitespace-nowrap"
+                      className="inline-flex items-center gap-1 hover:text-ink whitespace-nowrap"
                     >
                       <span>Return %</span>
                       <ArrowUpDown className="h-3 w-3" aria-hidden="true" />
@@ -382,7 +382,7 @@ export function ApparelAccountsView({
                     <button
                       type="button"
                       onClick={() => toggleSort('lastActive')}
-                      className="inline-flex items-center gap-1 hover:text-slate-900 dark:hover:text-slate-100 whitespace-nowrap"
+                      className="inline-flex items-center gap-1 hover:text-ink whitespace-nowrap"
                     >
                       <span>Last Active</span>
                       <ArrowUpDown className="h-3 w-3" aria-hidden="true" />
@@ -391,16 +391,14 @@ export function ApparelAccountsView({
                   <th className="py-3 pl-3 pr-5 text-right whitespace-nowrap">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+              <tbody className="divide-y divide-line-subtle text-sm">
                 {filteredAccounts.map((acc) => {
                   const isChecked = selectedIds.includes(acc.id);
                   return (
                     <tr
                       key={acc.id}
                       className={`transition-colors ${
-                        isChecked
-                          ? 'bg-slate-50 dark:bg-slate-800/60'
-                          : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/40'
+                        isChecked ? 'bg-accent-soft/70' : 'hover:bg-hover'
                       }`}
                     >
                       <td className="py-3 pl-5 pr-2">
@@ -409,7 +407,7 @@ export function ApparelAccountsView({
                           checked={isChecked}
                           onChange={() => toggleSelectOne(acc.id)}
                           aria-label={`Select ${acc.fullName}`}
-                          className="h-4 w-4 rounded border-slate-300 text-slate-900 dark:border-slate-700 dark:bg-slate-900"
+                          className="h-4 w-4 rounded border-line bg-surface text-accent accent-accent"
                         />
                       </td>
                       <td onClick={() => onSelectAccount(acc)} className="py-3 px-3 cursor-pointer">
@@ -417,14 +415,14 @@ export function ApparelAccountsView({
                           <Avatar name={acc.fullName} src={acc.avatarUrl} size="sm" />
                           <div className="min-w-0">
                             <div className="flex items-baseline gap-2">
-                              <span className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                              <span className="font-medium text-ink truncate">
                                 {acc.fullName}
                               </span>
-                              <span className="font-mono text-[11px] text-slate-400 shrink-0">
+                              <span className="font-mono text-[11px] text-ink-muted shrink-0">
                                 {acc.id}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            <p className="text-xs text-ink-muted truncate">
                               {acc.companyName ? `${acc.companyName} · ${acc.email}` : acc.email}
                             </p>
                           </div>
@@ -432,25 +430,25 @@ export function ApparelAccountsView({
                       </td>
                       <td
                         onClick={() => onSelectAccount(acc)}
-                        className="py-3 px-3 cursor-pointer text-xs text-slate-700 dark:text-slate-300 whitespace-nowrap"
+                        className="py-3 px-3 cursor-pointer text-xs text-ink-secondary whitespace-nowrap"
                       >
                         {acc.segment} · {acc.role}
                       </td>
                       <td
                         onClick={() => onSelectAccount(acc)}
-                        className="py-3 px-3 cursor-pointer text-xs font-medium text-slate-800 dark:text-slate-200 whitespace-nowrap"
+                        className="py-3 px-3 cursor-pointer text-xs font-medium text-ink whitespace-nowrap"
                       >
                         {acc.tier}
                       </td>
                       <td
                         onClick={() => onSelectAccount(acc)}
-                        className="py-3 px-3 cursor-pointer text-right font-mono text-xs text-slate-700 dark:text-slate-300 tabular-nums"
+                        className="py-3 px-3 cursor-pointer text-right font-mono text-xs text-ink-secondary tabular-nums"
                       >
                         {formatNumber(acc.totalOrders)}
                       </td>
                       <td
                         onClick={() => onSelectAccount(acc)}
-                        className="py-3 px-3 cursor-pointer text-right font-mono text-xs font-semibold text-slate-900 dark:text-slate-100 tabular-nums"
+                        className="py-3 px-3 cursor-pointer text-right font-mono text-xs font-semibold text-ink tabular-nums"
                       >
                         {formatInr(acc.lifetimeSpend)}
                       </td>
@@ -459,14 +457,14 @@ export function ApparelAccountsView({
                         className={`py-3 px-3 cursor-pointer text-right font-mono text-xs tabular-nums ${
                           acc.returnRate >= 25
                             ? 'font-semibold text-red-700 dark:text-red-400'
-                            : 'text-slate-600 dark:text-slate-400'
+                            : 'text-ink-muted'
                         }`}
                       >
                         {acc.returnRate.toFixed(1)}%
                       </td>
                       <td
                         onClick={() => onSelectAccount(acc)}
-                        className="py-3 px-3 cursor-pointer text-right font-mono text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap tabular-nums"
+                        className="py-3 px-3 cursor-pointer text-right font-mono text-xs text-ink-muted whitespace-nowrap tabular-nums"
                       >
                         {acc.lastActive}
                       </td>
@@ -577,19 +575,19 @@ export function ApparelAccountDrawer({
         role="dialog"
         aria-modal="true"
         aria-label={`Account details for ${account.fullName}`}
-        className="relative z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-2xl border-l border-slate-200 dark:bg-[#111827] dark:border-slate-800 overflow-hidden"
+        className="relative z-50 flex h-full w-full max-w-xl flex-col bg-surface shadow-2xl border-l border-line overflow-hidden"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-5 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-5">
           <div className="flex items-center gap-4 min-w-0">
             <Avatar name={account.fullName} src={account.avatarUrl} size="lg" />
             <div className="min-w-0">
               <div className="flex items-center gap-2.5">
-                <h2 className="font-display text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
+                <h2 className="font-display text-lg font-semibold text-ink truncate">
                   {account.fullName}
                 </h2>
-                <span className="font-mono text-xs text-slate-400">{account.id}</span>
+                <span className="font-mono text-xs text-ink-muted">{account.id}</span>
               </div>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 truncate">
+              <p className="mt-0.5 text-xs text-ink-muted truncate">
                 {account.segment} · {account.role} · {account.tier}
               </p>
               <div className="mt-1.5">
@@ -602,7 +600,7 @@ export function ApparelAccountDrawer({
             type="button"
             onClick={onClose}
             aria-label="Close account details"
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+            className="rounded-lg p-2 text-ink-muted hover:bg-hover hover:text-ink transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -614,7 +612,7 @@ export function ApparelAccountDrawer({
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover transition-colors"
               >
                 <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>Edit Account</span>
@@ -636,8 +634,8 @@ export function ApparelAccountDrawer({
               onClick={handleToggleStatus}
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                 account.status === 'Suspended'
-                  ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/60 dark:text-emerald-400'
-                  : 'border-amber-200 text-amber-800 hover:bg-amber-50 dark:border-amber-900/60 dark:text-amber-400'
+                  ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-900/60 dark:text-emerald-400 dark:hover:bg-emerald-950/40'
+                  : 'border-amber-200 text-amber-800 hover:bg-amber-50 dark:border-amber-900/60 dark:text-amber-400 dark:hover:bg-amber-950/40'
               }`}
             >
               {account.status === 'Suspended' ? 'Reactivate Account' : 'Suspend Account'}
@@ -646,7 +644,7 @@ export function ApparelAccountDrawer({
             <button
               type="button"
               onClick={() => onResetPassword(account)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover transition-colors"
             >
               <KeyRound className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Send Password Reset</span>
@@ -656,7 +654,7 @@ export function ApparelAccountDrawer({
               <button
                 type="button"
                 onClick={() => setConfirmDelete(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/40 transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>Delete</span>
@@ -676,7 +674,7 @@ export function ApparelAccountDrawer({
                 <button
                   type="button"
                   onClick={() => setConfirmDelete(false)}
-                  className="text-xs text-slate-600 dark:text-slate-400"
+                  className="text-xs text-ink-secondary hover:text-ink"
                 >
                   Cancel
                 </button>
@@ -687,11 +685,11 @@ export function ApparelAccountDrawer({
           {isEditing ? (
             <form
               onSubmit={handleSave}
-              className="space-y-4 border-t border-slate-200 pt-5 dark:border-slate-800"
+              className="space-y-4 border-t border-line pt-5"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     Full Name
                   </label>
                   <input
@@ -699,11 +697,11 @@ export function ApparelAccountDrawer({
                     required
                     value={draft.fullName}
                     onChange={(e) => setDraft({ ...draft, fullName: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     Email
                   </label>
                   <input
@@ -711,22 +709,22 @@ export function ApparelAccountDrawer({
                     required
                     value={draft.email}
                     onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     Phone
                   </label>
                   <input
                     type="text"
                     value={draft.phone}
                     onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     Boutique / Company (Optional)
                   </label>
                   <input
@@ -735,11 +733,11 @@ export function ApparelAccountDrawer({
                     onChange={(e) =>
                       setDraft({ ...draft, companyName: e.target.value || undefined })
                     }
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     Account Segment
                   </label>
                   <select
@@ -752,7 +750,7 @@ export function ApparelAccountDrawer({
                         role: ROLES_BY_SEGMENT[nextSeg][0],
                       });
                     }}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   >
                     <option value="Customer">Customer</option>
                     <option value="Wholesale">Wholesale</option>
@@ -760,13 +758,13 @@ export function ApparelAccountDrawer({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     Role
                   </label>
                   <select
                     value={draft.role}
                     onChange={(e) => setDraft({ ...draft, role: e.target.value as UserRole })}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   >
                     {ROLES_BY_SEGMENT[draft.segment].map((r) => (
                       <option key={r} value={r}>
@@ -776,13 +774,13 @@ export function ApparelAccountDrawer({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     Loyalty / Access Tier
                   </label>
                   <select
                     value={draft.tier}
                     onChange={(e) => setDraft({ ...draft, tier: e.target.value as LoyaltyTier })}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   >
                     {TIERS.map((t) => (
                       <option key={t} value={t}>
@@ -792,7 +790,7 @@ export function ApparelAccountDrawer({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     Status
                   </label>
                   <select
@@ -800,7 +798,7 @@ export function ApparelAccountDrawer({
                     onChange={(e) =>
                       setDraft({ ...draft, status: e.target.value as AccountStatus })
                     }
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   >
                     <option value="Active">Active</option>
                     <option value="Pending">Pending</option>
@@ -808,7 +806,7 @@ export function ApparelAccountDrawer({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     City
                   </label>
                   <input
@@ -816,11 +814,11 @@ export function ApparelAccountDrawer({
                     required
                     value={draft.city}
                     onChange={(e) => setDraft({ ...draft, city: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <label className="block text-xs font-medium text-ink-secondary">
                     Country
                   </label>
                   <input
@@ -828,18 +826,18 @@ export function ApparelAccountDrawer({
                     required
                     value={draft.country}
                     onChange={(e) => setDraft({ ...draft, country: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="border-t border-slate-200 pt-4 dark:border-slate-800">
-                <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-3">
+              <div className="border-t border-line pt-4">
+                <h3 className="text-xs font-semibold text-ink mb-3">
                   Apparel Fit &amp; Sizing Profile
                 </h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-xs text-slate-500">Tops</label>
+                    <label className="block text-xs text-ink-muted">Tops</label>
                     <input
                       type="text"
                       value={draft.sizeProfile.tops}
@@ -849,11 +847,11 @@ export function ApparelAccountDrawer({
                           sizeProfile: { ...draft.sizeProfile, tops: e.target.value },
                         })
                       }
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      className="mt-1 w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500">Bottoms</label>
+                    <label className="block text-xs text-ink-muted">Bottoms</label>
                     <input
                       type="text"
                       value={draft.sizeProfile.bottoms}
@@ -863,11 +861,11 @@ export function ApparelAccountDrawer({
                           sizeProfile: { ...draft.sizeProfile, bottoms: e.target.value },
                         })
                       }
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      className="mt-1 w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500">Footwear</label>
+                    <label className="block text-xs text-ink-muted">Footwear</label>
                     <input
                       type="text"
                       value={draft.sizeProfile.footwear}
@@ -877,11 +875,11 @@ export function ApparelAccountDrawer({
                           sizeProfile: { ...draft.sizeProfile, footwear: e.target.value },
                         })
                       }
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      className="mt-1 w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500">Fit</label>
+                    <label className="block text-xs text-ink-muted">Fit</label>
                     <select
                       value={draft.sizeProfile.fitPreference}
                       onChange={(e) =>
@@ -893,7 +891,7 @@ export function ApparelAccountDrawer({
                           },
                         })
                       }
-                      className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      className="mt-1 w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
                     >
                       <option value="Tailored">Tailored</option>
                       <option value="Regular">Regular</option>
@@ -903,7 +901,7 @@ export function ApparelAccountDrawer({
                   </div>
                 </div>
                 <div className="mt-3">
-                  <label className="block text-xs text-slate-500">Clienteling &amp; Notes</label>
+                  <label className="block text-xs text-ink-muted">Clienteling &amp; Notes</label>
                   <textarea
                     rows={2}
                     value={draft.sizeProfile.notes ?? ''}
@@ -913,7 +911,7 @@ export function ApparelAccountDrawer({
                         sizeProfile: { ...draft.sizeProfile, notes: e.target.value },
                       })
                     }
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
                   />
                 </div>
               </div>
@@ -925,13 +923,13 @@ export function ApparelAccountDrawer({
                     setDraft(account);
                     setIsEditing(false);
                   }}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+                  className="rounded-lg border border-line px-4 py-2 text-xs font-medium text-ink-secondary hover:bg-hover transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
+                  className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
                 >
                   Save Changes
                 </button>
@@ -939,32 +937,32 @@ export function ApparelAccountDrawer({
             </form>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200 dark:divide-slate-800 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-line rounded-xl border border-line">
                 <div className="p-3.5">
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Lifetime Spend</p>
-                  <p className="mt-1 font-mono text-base font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                  <p className="text-[11px] text-ink-muted">Lifetime Spend</p>
+                  <p className="mt-1 font-mono text-base font-semibold text-ink tabular-nums">
                     {formatInr(account.lifetimeSpend)}
                   </p>
                 </div>
                 <div className="p-3.5">
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Total Orders</p>
-                  <p className="mt-1 font-mono text-base font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                  <p className="text-[11px] text-ink-muted">Total Orders</p>
+                  <p className="mt-1 font-mono text-base font-semibold text-ink tabular-nums">
                     {account.totalOrders}
                   </p>
                 </div>
                 <div className="p-3.5">
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Avg Order</p>
-                  <p className="mt-1 font-mono text-base font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                  <p className="text-[11px] text-ink-muted">Avg Order</p>
+                  <p className="mt-1 font-mono text-base font-semibold text-ink tabular-nums">
                     {formatInr(avgOrderValue)}
                   </p>
                 </div>
                 <div className="p-3.5">
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Return Rate</p>
+                  <p className="text-[11px] text-ink-muted">Return Rate</p>
                   <p
                     className={`mt-1 font-mono text-base font-semibold tabular-nums ${
                       account.returnRate >= 25
                         ? 'text-red-700 dark:text-red-400'
-                        : 'text-slate-900 dark:text-slate-100'
+                        : 'text-ink'
                     }`}
                   >
                     {account.returnRate.toFixed(1)}%
@@ -972,39 +970,39 @@ export function ApparelAccountDrawer({
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 pt-5 dark:border-slate-800">
-                <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+              <div className="border-t border-line-subtle pt-5">
+                <h3 className="text-xs font-semibold text-ink">
                   Contact &amp; Account Details
                 </h3>
                 <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-6 text-xs">
                   <div>
-                    <dt className="text-slate-500">Email</dt>
-                    <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">
+                    <dt className="text-ink-muted">Email</dt>
+                    <dd className="mt-0.5 font-medium text-ink">
                       {account.email}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-slate-500">Phone</dt>
-                    <dd className="mt-0.5 font-mono text-slate-900 dark:text-slate-100">
+                    <dt className="text-ink-muted">Phone</dt>
+                    <dd className="mt-0.5 font-mono text-ink">
                       {account.phone}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-slate-500">Location</dt>
-                    <dd className="mt-0.5 text-slate-900 dark:text-slate-100">
+                    <dt className="text-ink-muted">Location</dt>
+                    <dd className="mt-0.5 text-ink">
                       {account.city}, {account.country}
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-slate-500">Joined · Last Active</dt>
-                    <dd className="mt-0.5 font-mono text-slate-900 dark:text-slate-100 tabular-nums">
+                    <dt className="text-ink-muted">Joined · Last Active</dt>
+                    <dd className="mt-0.5 font-mono text-ink tabular-nums">
                       {account.joinedDate} · {account.lastActive}
                     </dd>
                   </div>
                   {account.companyName && (
                     <div className="sm:col-span-2">
-                      <dt className="text-slate-500">Organization / Boutique</dt>
-                      <dd className="mt-0.5 font-medium text-slate-900 dark:text-slate-100">
+                      <dt className="text-ink-muted">Organization / Boutique</dt>
+                      <dd className="mt-0.5 font-medium text-ink">
                         {account.companyName}
                       </dd>
                     </div>
@@ -1012,53 +1010,53 @@ export function ApparelAccountDrawer({
                 </dl>
               </div>
 
-              <div className="border-t border-slate-100 pt-5 dark:border-slate-800">
-                <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+              <div className="border-t border-line-subtle pt-5">
+                <h3 className="text-xs font-semibold text-ink">
                   Apparel Fit &amp; Sizing Profile
                 </h3>
                 <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
                   <div>
-                    <span className="block text-slate-500">Tops</span>
-                    <span className="mt-0.5 block font-mono font-medium text-slate-900 dark:text-slate-100">
+                    <span className="block text-ink-muted">Tops</span>
+                    <span className="mt-0.5 block font-mono font-medium text-ink">
                       {account.sizeProfile.tops}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-slate-500">Bottoms</span>
-                    <span className="mt-0.5 block font-mono font-medium text-slate-900 dark:text-slate-100">
+                    <span className="block text-ink-muted">Bottoms</span>
+                    <span className="mt-0.5 block font-mono font-medium text-ink">
                       {account.sizeProfile.bottoms}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-slate-500">Footwear</span>
-                    <span className="mt-0.5 block font-mono font-medium text-slate-900 dark:text-slate-100">
+                    <span className="block text-ink-muted">Footwear</span>
+                    <span className="mt-0.5 block font-mono font-medium text-ink">
                       {account.sizeProfile.footwear}
                     </span>
                   </div>
                   <div>
-                    <span className="block text-slate-500">Silhouette</span>
-                    <span className="mt-0.5 block font-medium text-slate-900 dark:text-slate-100">
+                    <span className="block text-ink-muted">Silhouette</span>
+                    <span className="mt-0.5 block font-medium text-ink">
                       {account.sizeProfile.fitPreference}
                     </span>
                   </div>
                 </div>
                 {account.sizeProfile.notes && (
-                  <p className="mt-3 text-xs leading-relaxed text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/60 rounded-lg p-3 border border-slate-100 dark:border-slate-800">
+                  <p className="mt-3 text-xs leading-relaxed text-ink-secondary bg-subtle rounded-lg p-3 border border-line-subtle">
                     {account.sizeProfile.notes}
                   </p>
                 )}
               </div>
 
-              <div className="border-t border-slate-100 pt-5 dark:border-slate-800">
-                <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+              <div className="border-t border-line-subtle pt-5">
+                <h3 className="text-xs font-semibold text-ink">
                   Linked Apparel Orders ({accountOrders.length})
                 </h3>
                 {accountOrders.length === 0 ? (
-                  <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-3 text-xs text-ink-muted">
                     No recorded merchandise orders on this account yet.
                   </p>
                 ) : (
-                  <div className="mt-3 divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-800 rounded-lg">
+                  <div className="mt-3 divide-y divide-line-subtle border border-line rounded-lg overflow-hidden">
                     {accountOrders.map((ord) => (
                       <button
                         key={ord.id}
@@ -1067,21 +1065,21 @@ export function ApparelAccountDrawer({
                           onClose();
                           onSelectOrder(ord);
                         }}
-                        className="w-full p-3.5 text-left text-xs hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                        className="w-full p-3.5 text-left text-xs hover:bg-hover transition-colors"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+                          <span className="font-mono font-semibold text-ink">
                             {ord.orderNumber} · {ord.orderType}
                           </span>
-                          <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                          <span className="font-mono font-semibold text-ink tabular-nums">
                             {formatInr(ord.totalAmount)}
                           </span>
                         </div>
-                        <p className="mt-1 text-slate-600 dark:text-slate-300 truncate">
+                        <p className="mt-1 text-ink-secondary truncate">
                           {ord.items.map((i) => `${i.quantity}× ${i.name} (${i.variant})`).join(', ')}
                         </p>
                         <div className="mt-1.5 flex items-center justify-between gap-2">
-                          <span className="font-mono text-[11px] text-slate-500">
+                          <span className="font-mono text-[11px] text-ink-muted">
                             {formatDateTime(ord.createdAt)} · {ord.paymentMethod} ({ord.paymentStatus})
                           </span>
                           <OrderStatusText status={ord.orderStatus} />
@@ -1186,17 +1184,17 @@ export function ApparelCreateAccountModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-apparel-account-title"
-        className="relative z-10 w-full max-w-xl rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-[#111827] max-h-[90vh] overflow-y-auto"
+        className="relative z-10 w-full max-w-xl rounded-xl border border-line bg-surface shadow-xl max-h-[90vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b border-line px-6 py-4">
           <div>
             <h2
               id="create-apparel-account-title"
-              className="font-display text-base font-semibold text-slate-900 dark:text-slate-100"
+              className="font-display text-base font-semibold text-ink"
             >
               Provision User Account
             </h2>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-0.5 text-xs text-ink-muted">
               Create a customer, wholesale buyer, or internal staff account
             </p>
           </div>
@@ -1204,7 +1202,7 @@ export function ApparelCreateAccountModal({
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+            className="rounded-lg p-1.5 text-ink-muted hover:bg-hover hover:text-ink transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -1213,7 +1211,7 @@ export function ApparelCreateAccountModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 Full Name *
               </label>
               <input
@@ -1222,11 +1220,11 @@ export function ApparelCreateAccountModal({
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="e.g. Rohan Kulkarni"
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 Email Address *
               </label>
               <input
@@ -1235,17 +1233,17 @@ export function ApparelCreateAccountModal({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="rohan@domain.in"
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 Account Segment
               </label>
               <select
                 value={segment}
                 onChange={(e) => handleSegmentChange(e.target.value as AccountSegment)}
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
               >
                 <option value="Customer">Customer</option>
                 <option value="Wholesale">Wholesale</option>
@@ -1253,13 +1251,13 @@ export function ApparelCreateAccountModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 Assigned Role
               </label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as UserRole)}
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
               >
                 {ROLES_BY_SEGMENT[segment].map((r) => (
                   <option key={r} value={r}>
@@ -1269,13 +1267,13 @@ export function ApparelCreateAccountModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 Loyalty / Access Tier
               </label>
               <select
                 value={tier}
                 onChange={(e) => setTier(e.target.value as LoyaltyTier)}
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
               >
                 {TIERS.map((t) => (
                   <option key={t} value={t}>
@@ -1285,13 +1283,13 @@ export function ApparelCreateAccountModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 Initial Status
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as AccountStatus)}
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
               >
                 <option value="Active">Active</option>
                 <option value="Pending">Pending Review</option>
@@ -1299,7 +1297,7 @@ export function ApparelCreateAccountModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 Phone
               </label>
               <input
@@ -1307,11 +1305,11 @@ export function ApparelCreateAccountModal({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 98200 11223"
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 Boutique / Company (Optional)
               </label>
               <input
@@ -1319,11 +1317,11 @@ export function ApparelCreateAccountModal({
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="e.g. Studio Select Mumbai"
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 City
               </label>
               <input
@@ -1331,60 +1329,60 @@ export function ApparelCreateAccountModal({
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 placeholder="Bengaluru"
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-xs font-medium text-ink-secondary">
                 Country
               </label>
               <input
                 type="text"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
-            <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-3">
+          <div className="border-t border-line-subtle pt-4">
+            <p className="text-xs font-semibold text-ink mb-3">
               Default Apparel Fit Profile
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label className="block text-xs text-slate-500">Tops</label>
+                <label className="block text-xs text-ink-muted">Tops</label>
                 <input
                   type="text"
                   value={tops}
                   onChange={(e) => setTops(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-500">Bottoms</label>
+                <label className="block text-xs text-ink-muted">Bottoms</label>
                 <input
                   type="text"
                   value={bottoms}
                   onChange={(e) => setBottoms(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-500">Footwear</label>
+                <label className="block text-xs text-ink-muted">Footwear</label>
                 <input
                   type="text"
                   value={footwear}
                   onChange={(e) => setFootwear(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-500">Fit</label>
+                <label className="block text-xs text-ink-muted">Fit</label>
                 <select
                   value={fitPreference}
                   onChange={(e) => setFitPreference(e.target.value as FitPreference)}
-                  className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="mt-1 w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
                 >
                   <option value="Tailored">Tailored</option>
                   <option value="Regular">Regular</option>
@@ -1394,28 +1392,28 @@ export function ApparelCreateAccountModal({
               </div>
             </div>
             <div className="mt-3">
-              <label className="block text-xs text-slate-500">Clienteling / Onboarding Notes</label>
+              <label className="block text-xs text-ink-muted">Clienteling / Onboarding Notes</label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Optional style preferences or wholesale terms..."
-                className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+          <div className="flex items-center justify-end gap-2 border-t border-line-subtle pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
+              className="rounded-lg border border-line px-4 py-2 text-xs font-medium text-ink-secondary hover:bg-hover transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
+              className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
             >
               Create Account
             </button>

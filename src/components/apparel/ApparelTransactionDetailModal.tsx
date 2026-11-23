@@ -98,17 +98,17 @@ export function ApparelTransactionDetailModal({
         role="dialog"
         aria-modal="true"
         aria-label={`Transaction details for ${transaction.id}`}
-        className="relative z-10 w-full max-w-2xl rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-[#111827] max-h-[90vh] overflow-y-auto"
+        className="relative z-10 w-full max-w-2xl rounded-xl border border-line bg-surface shadow-2xl max-h-[90vh] overflow-y-auto"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="font-mono text-base font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="font-mono text-base font-bold text-ink">
                 {transaction.id}
               </h2>
               <TransactionStatusText status={transaction.status} />
             </div>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-0.5 text-xs text-ink-muted">
               {transaction.customerName} · {transaction.paymentMethod} via{' '}
               {transaction.gatewayProvider}
             </p>
@@ -117,7 +117,7 @@ export function ApparelTransactionDetailModal({
             type="button"
             onClick={onClose}
             aria-label="Close transaction modal"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+            className="rounded-lg p-1.5 text-ink-muted hover:bg-hover hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
@@ -133,7 +133,7 @@ export function ApparelTransactionDetailModal({
                   onClose();
                   onOpenOrder(order);
                 }}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
               >
                 <span>View Order {order.orderNumber}</span>
                 <ExternalLink className="h-3 w-3" aria-hidden="true" />
@@ -142,7 +142,7 @@ export function ApparelTransactionDetailModal({
             <button
               type="button"
               onClick={handleDownloadReceipt}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
             >
               <Download className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Download Receipt</span>
@@ -151,7 +151,7 @@ export function ApparelTransactionDetailModal({
               <button
                 type="button"
                 onClick={() => onPrintInvoice(order)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
               >
                 <Printer className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>Print Invoice</span>
@@ -171,7 +171,7 @@ export function ApparelTransactionDetailModal({
               <button
                 type="button"
                 onClick={() => onVerifyWebhookPayment(transaction)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
               >
                 <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>Verify Gateway Webhook</span>
@@ -201,7 +201,7 @@ export function ApparelTransactionDetailModal({
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                  <label className="block text-[11px] font-medium text-ink-secondary">
                     Refund Amount (INR)
                   </label>
                   <input
@@ -211,11 +211,11 @@ export function ApparelTransactionDetailModal({
                     required
                     value={refundAmount}
                     onChange={(e) => setRefundAmount(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-mono text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-1.5 font-mono text-xs text-ink"
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                  <label className="block text-[11px] font-medium text-ink-secondary">
                     Return / Refund Reason *
                   </label>
                   <input
@@ -224,7 +224,7 @@ export function ApparelTransactionDetailModal({
                     value={refundReason}
                     onChange={(e) => setRefundReason(e.target.value)}
                     placeholder="e.g. Size exchange unavailable, garment returned unworn..."
-                    className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-1.5 text-xs text-ink"
                   />
                 </div>
               </div>
@@ -232,7 +232,7 @@ export function ApparelTransactionDetailModal({
                 <button
                   type="button"
                   onClick={() => setRefundOpen(false)}
-                  className="px-3 py-1 text-xs text-slate-500"
+                  className="px-3 py-1 text-xs text-ink-muted hover:text-ink"
                 >
                   Cancel
                 </button>
@@ -247,40 +247,40 @@ export function ApparelTransactionDetailModal({
           )}
 
           {/* Core Verification Metadata */}
-          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 rounded-xl border border-slate-200 p-4 text-xs dark:border-slate-800">
+          <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 rounded-xl border border-line p-4 text-xs">
             <div>
-              <dt className="text-slate-500 dark:text-slate-400">Amount</dt>
-              <dd className="mt-0.5 font-mono text-sm font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+              <dt className="text-ink-muted">Amount</dt>
+              <dd className="mt-0.5 font-mono text-sm font-bold text-ink tabular-nums">
                 {formatInr(transaction.amount)}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500 dark:text-slate-400">Refunded</dt>
-              <dd className="mt-0.5 font-mono text-sm font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+              <dt className="text-ink-muted">Refunded</dt>
+              <dd className="mt-0.5 font-mono text-sm font-semibold text-ink tabular-nums">
                 {formatInr(transaction.refundedAmount)}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500 dark:text-slate-400">Gateway Verification</dt>
-              <dd className="mt-0.5 font-semibold text-slate-900 dark:text-slate-100">
+              <dt className="text-ink-muted">Gateway Verification</dt>
+              <dd className="mt-0.5 font-semibold text-ink">
                 {transaction.verifiedByWebhook ? 'Verified Webhook' : 'Pending Verification'}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500 dark:text-slate-400">Gateway Reference</dt>
-              <dd className="mt-0.5 font-mono text-slate-900 dark:text-slate-100">
+              <dt className="text-ink-muted">Gateway Reference</dt>
+              <dd className="mt-0.5 font-mono text-ink">
                 {transaction.gatewayReference ?? '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500 dark:text-slate-400">Created At</dt>
-              <dd className="mt-0.5 font-mono text-slate-900 dark:text-slate-100">
+              <dt className="text-ink-muted">Created At</dt>
+              <dd className="mt-0.5 font-mono text-ink">
                 {formatDateTime(transaction.createdAt)}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500 dark:text-slate-400">Updated At</dt>
-              <dd className="mt-0.5 font-mono text-slate-900 dark:text-slate-100">
+              <dt className="text-ink-muted">Updated At</dt>
+              <dd className="mt-0.5 font-mono text-ink">
                 {formatDateTime(transaction.updatedAt)}
               </dd>
             </div>
@@ -289,21 +289,21 @@ export function ApparelTransactionDetailModal({
           {/* Refund History */}
           {txRefunds.length > 0 && (
             <div>
-              <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              <h3 className="text-xs font-semibold text-ink mb-2">
                 Linked Refunds
               </h3>
-              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+              <div className="divide-y divide-line-subtle rounded-xl border border-line">
                 {txRefunds.map((r) => (
                   <div key={r.id} className="flex items-center justify-between gap-3 p-3 text-xs">
                     <div>
-                      <p className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+                      <p className="font-mono font-semibold text-ink">
                         {r.id} · {formatInr(r.amount)}
                       </p>
-                      <p className="text-slate-500 dark:text-slate-400">
+                      <p className="text-ink-muted">
                         {r.reason} · by {r.processedBy}
                       </p>
                     </div>
-                    <span className="font-mono text-[11px] text-slate-400 shrink-0">
+                    <span className="font-mono text-[11px] text-ink-muted shrink-0">
                       {formatDateTime(r.createdAt)}
                     </span>
                   </div>
@@ -314,28 +314,28 @@ export function ApparelTransactionDetailModal({
 
           {/* Gateway Payment Events */}
           <div>
-            <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-2">
+            <h3 className="text-xs font-semibold text-ink mb-2">
               Gateway Payment Events
             </h3>
             {events.length === 0 ? (
-              <p className="text-xs text-slate-500">No gateway events recorded.</p>
+              <p className="text-xs text-ink-muted">No gateway events recorded.</p>
             ) : (
               <div className="space-y-2 text-xs">
                 {events.map((evt) => (
                   <div
                     key={evt.id}
-                    className="flex items-baseline justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/60"
+                    className="flex items-baseline justify-between gap-3 rounded-lg bg-subtle px-3 py-2"
                   >
                     <div>
-                      <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+                      <span className="font-mono font-semibold text-ink">
                         {evt.eventType}
                       </span>
-                      <span className="ml-2 text-slate-500">({evt.gateway})</span>
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400">
+                      <span className="ml-2 text-ink-muted">({evt.gateway})</span>
+                      <p className="text-[11px] text-ink-secondary">
                         {evt.payloadSummary}
                       </p>
                     </div>
-                    <span className="font-mono text-[10px] text-slate-400 shrink-0">
+                    <span className="font-mono text-[10px] text-ink-muted shrink-0">
                       {formatDateTime(evt.timestamp)}
                     </span>
                   </div>

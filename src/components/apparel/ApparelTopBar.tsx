@@ -1,12 +1,15 @@
-import { Bell, Menu, Moon, Plus, Sun, UserPlus } from 'lucide-react';
+import { Bell, Check, Menu, Moon, Palette, Plus, Sun, UserPlus } from 'lucide-react';
 import { useState } from 'react';
-import type { ApparelRoute, LiveNotification } from '../../types/apparel';
+import type { ApparelRoute, LiveNotification, ThemePreset } from '../../types/apparel';
 import { formatTimeOnly } from '../../utils/apparelFormatters';
+import { THEME_PRESETS } from '../../utils/themes';
 
 interface ApparelTopBarProps {
   activeRoute: ApparelRoute;
   isDark: boolean;
   onToggleTheme: () => void;
+  themePreset: ThemePreset;
+  onChangeThemePreset: (preset: ThemePreset) => void;
   onOpenMobileMenu: () => void;
   onSimulateIncomingOrder: () => void;
   onOpenNewAccount: () => void;
@@ -37,6 +40,8 @@ export function ApparelTopBar({
   activeRoute,
   isDark,
   onToggleTheme,
+  themePreset,
+  onChangeThemePreset,
   onOpenMobileMenu,
   onSimulateIncomingOrder,
   onOpenNewAccount,
@@ -45,29 +50,30 @@ export function ApparelTopBar({
   onSelectOrderFromNotification,
 }: ApparelTopBarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-6 border-b border-slate-200 bg-white/95 px-4 sm:px-8 backdrop-blur-sm dark:border-slate-800 dark:bg-[#111827]/95">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-6 border-b border-line bg-surface/95 px-4 sm:px-8 backdrop-blur-sm transition-colors duration-200">
       {/* Zone 1: Breadcrumb */}
       <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
           onClick={onOpenMobileMenu}
           aria-label="Open navigation menu"
-          className="lg:hidden rounded-lg p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+          className="lg:hidden rounded-lg p-2 text-ink-secondary hover:bg-hover hover:text-ink"
         >
           <Menu className="h-5 w-5" />
         </button>
 
         <div className="flex items-center gap-2 min-w-0">
-          <span className="hidden sm:inline text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+          <span className="hidden sm:inline text-xs font-medium text-ink-muted whitespace-nowrap">
             Kova Studio
           </span>
-          <span className="hidden sm:inline text-slate-300 dark:text-slate-600" aria-hidden="true">
+          <span className="hidden sm:inline text-line" aria-hidden="true">
             /
           </span>
-          <h1 className="font-display text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 truncate">
+          <h1 className="font-display text-base sm:text-lg font-semibold text-ink truncate">
             {ROUTE_TITLES[activeRoute]}
           </h1>
         </div>
@@ -79,7 +85,7 @@ export function ApparelTopBar({
           <button
             type="button"
             onClick={onOpenNewAccount}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors whitespace-nowrap shrink-0"
           >
             <UserPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>New Account</span>
@@ -88,7 +94,7 @@ export function ApparelTopBar({
           <button
             type="button"
             onClick={onSimulateIncomingOrder}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white transition-colors whitespace-nowrap shrink-0"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors whitespace-nowrap shrink-0"
           >
             <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>Simulate Order</span>
@@ -99,9 +105,12 @@ export function ApparelTopBar({
         <div className="relative">
           <button
             type="button"
-            onClick={() => setNotifOpen((prev) => !prev)}
+            onClick={() => {
+              setNotifOpen((prev) => !prev);
+              setThemeMenuOpen(false);
+            }}
             aria-label={`Notifications (${unreadCount} unread)`}
-            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-secondary hover:bg-hover hover:text-ink transition-colors"
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
@@ -118,24 +127,24 @@ export function ApparelTopBar({
                 onClick={() => setNotifOpen(false)}
                 aria-hidden="true"
               />
-              <div className="absolute right-0 mt-2 z-40 w-80 rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
-                <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 dark:border-slate-800">
-                  <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                    Order & Payment Alerts
+              <div className="absolute right-0 mt-2 z-40 w-80 rounded-xl border border-line bg-surface shadow-xl overflow-hidden">
+                <div className="flex items-center justify-between border-b border-line-subtle px-4 py-3">
+                  <span className="text-xs font-semibold text-ink">
+                    Order &amp; Payment Alerts
                   </span>
                   {unreadCount > 0 && (
                     <button
                       type="button"
                       onClick={onMarkAllRead}
-                      className="text-[11px] font-medium text-slate-600 hover:text-slate-900 underline dark:text-slate-400 dark:hover:text-white"
+                      className="text-[11px] font-medium text-accent-text hover:underline"
                     >
                       Mark all read
                     </button>
                   )}
                 </div>
-                <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="max-h-72 overflow-y-auto divide-y divide-line-subtle">
                   {notifications.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-xs text-slate-500">
+                    <p className="px-4 py-6 text-center text-xs text-ink-muted">
                       No recent alerts.
                     </p>
                   ) : (
@@ -147,19 +156,19 @@ export function ApparelTopBar({
                           onSelectOrderFromNotification(n.orderId);
                           setNotifOpen(false);
                         }}
-                        className={`w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
-                          !n.read ? 'bg-slate-50/80 dark:bg-slate-800/30' : ''
+                        className={`w-full px-4 py-3 text-left hover:bg-hover transition-colors ${
+                          !n.read ? 'bg-accent-soft/50' : ''
                         }`}
                       >
                         <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                          <span className="text-xs font-semibold text-ink">
                             {n.title}
                           </span>
-                          <span className="font-mono text-[10px] text-slate-400 shrink-0">
+                          <span className="font-mono text-[10px] text-ink-muted shrink-0">
                             {formatTimeOnly(n.timestamp)}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                        <p className="mt-0.5 text-xs text-ink-secondary">
                           {n.subtitle}
                         </p>
                       </button>
@@ -171,11 +180,86 @@ export function ApparelTopBar({
           )}
         </div>
 
+        {/* Theme Preset Selector Popover */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setThemeMenuOpen((prev) => !prev);
+              setNotifOpen(false);
+            }}
+            aria-label="Choose admin panel theme"
+            title="Choose admin panel theme"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-secondary hover:bg-hover hover:text-ink transition-colors"
+          >
+            <Palette className="h-4 w-4" />
+          </button>
+
+          {themeMenuOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-30"
+                onClick={() => setThemeMenuOpen(false)}
+                aria-hidden="true"
+              />
+              <div className="absolute right-0 mt-2 z-40 w-64 rounded-xl border border-line bg-surface shadow-xl overflow-hidden">
+                <div className="border-b border-line-subtle px-4 py-2.5">
+                  <p className="text-xs font-semibold text-ink">Admin Panel Theme</p>
+                  <p className="text-[11px] text-ink-muted">Select palette &amp; surface mood</p>
+                </div>
+                <div className="p-1.5 space-y-1">
+                  {THEME_PRESETS.map((preset) => {
+                    const active = themePreset === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          onChangeThemePreset(preset.id);
+                          setThemeMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-left transition-colors ${
+                          active
+                            ? 'bg-accent-soft text-accent-text'
+                            : 'text-ink hover:bg-hover'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="flex shrink-0 items-center overflow-hidden rounded-md border border-line">
+                            <span
+                              className="h-5 w-3"
+                              style={{ backgroundColor: preset.sidebarHex }}
+                              aria-hidden="true"
+                            />
+                            <span
+                              className="h-5 w-3"
+                              style={{
+                                backgroundColor: isDark ? preset.darkAccentHex : preset.accentHex,
+                              }}
+                              aria-hidden="true"
+                            />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold truncate">{preset.name}</p>
+                            <p className="text-[10px] text-ink-muted truncate">{preset.subtitle}</p>
+                          </div>
+                        </div>
+                        {active && <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
         <button
           type="button"
           onClick={onToggleTheme}
           aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-secondary hover:bg-hover hover:text-ink transition-colors"
         >
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>

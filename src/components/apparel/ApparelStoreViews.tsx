@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Check, Moon, Plus, Sun } from 'lucide-react';
 import { useState } from 'react';
 import type {
   ApparelCategory,
@@ -6,8 +6,10 @@ import type {
   BusinessSettings,
   ShippingZone,
   StaffMember,
+  ThemePreset,
 } from '../../types/apparel';
 import { formatInr } from '../../utils/apparelFormatters';
+import { THEME_PRESETS } from '../../utils/themes';
 
 export function ApparelProductsView({
   products,
@@ -55,13 +57,13 @@ export function ApparelProductsView({
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-ink-muted">
           {products.length} garments &amp; accessories · {products.filter((p) => p.isAvailable).length} active
         </p>
         <button
           type="button"
           onClick={() => setAdding((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
         >
           <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           <span>Add Garment SKU</span>
@@ -71,7 +73,7 @@ export function ApparelProductsView({
       {adding && (
         <form
           onSubmit={handleSubmit}
-          className="rounded-xl border border-slate-200 bg-white p-5 grid grid-cols-1 sm:grid-cols-6 gap-3 dark:border-slate-800 dark:bg-[#111827]"
+          className="rounded-xl border border-line bg-surface p-5 grid grid-cols-1 sm:grid-cols-6 gap-3"
         >
           <input
             type="text"
@@ -79,7 +81,7 @@ export function ApparelProductsView({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Garment name *"
-            className="sm:col-span-2 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="sm:col-span-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
           />
           <input
             type="text"
@@ -87,12 +89,12 @@ export function ApparelProductsView({
             value={sku}
             onChange={(e) => setSku(e.target.value)}
             placeholder="SKU (e.g. KV-SHT-202) *"
-            className="rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="rounded-lg border border-line bg-surface px-3 py-2 font-mono text-xs text-ink focus:border-accent focus:outline-none"
           />
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
           >
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
@@ -107,7 +109,7 @@ export function ApparelProductsView({
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="Price (INR) *"
-            className="rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="rounded-lg border border-line bg-surface px-3 py-2 font-mono text-xs text-ink focus:border-accent focus:outline-none"
           />
           <input
             type="number"
@@ -115,36 +117,36 @@ export function ApparelProductsView({
             value={stock}
             onChange={(e) => setStock(e.target.value)}
             placeholder="Stock"
-            className="rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="rounded-lg border border-line bg-surface px-3 py-2 font-mono text-xs text-ink focus:border-accent focus:outline-none"
           />
           <input
             type="text"
             value={fabric}
             onChange={(e) => setFabric(e.target.value)}
             placeholder="Fabric / Composition"
-            className="sm:col-span-3 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="sm:col-span-3 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
           />
           <input
             type="text"
             value={sizesAvailable}
             onChange={(e) => setSizesAvailable(e.target.value)}
             placeholder="Size run (e.g. XS–XL)"
-            className="sm:col-span-2 rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+            className="sm:col-span-2 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
           />
           <button
             type="submit"
-            className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
+            className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
           >
             Save SKU
           </button>
         </form>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
+      <div className="rounded-xl border border-line bg-surface overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left text-xs">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
+              <tr className="border-b border-line bg-subtle text-ink-muted">
                 <th className="py-3 pl-5 pr-3">SKU</th>
                 <th className="py-3 px-3">Garment &amp; Fabric</th>
                 <th className="py-3 px-3">Category</th>
@@ -154,14 +156,14 @@ export function ApparelProductsView({
                 <th className="py-3 pl-3 pr-5 text-right">Availability</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody className="divide-y divide-line-subtle">
               {products.map((item) => (
-                <tr key={item.id}>
-                  <td className="py-3 pl-5 pr-3 font-mono font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                <tr key={item.id} className="hover:bg-hover transition-colors">
+                  <td className="py-3 pl-5 pr-3 font-mono font-semibold text-ink-secondary whitespace-nowrap">
                     {item.sku}
                   </td>
                   <td className="py-3 px-3">
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    <span className="font-semibold text-ink">
                       {item.name}
                     </span>
                     {item.isBestseller && (
@@ -169,17 +171,17 @@ export function ApparelProductsView({
                         · Core Bestseller
                       </span>
                     )}
-                    <span className="block text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="block text-[11px] text-ink-muted">
                       {item.fabric}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-slate-600 dark:text-slate-300">
+                  <td className="py-3 px-3 text-ink-secondary">
                     {item.categoryName}
                   </td>
-                  <td className="py-3 px-3 font-mono text-slate-700 dark:text-slate-300">
+                  <td className="py-3 px-3 font-mono text-ink-secondary">
                     {item.sizesAvailable}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                  <td className="py-3 px-3 text-right font-mono font-semibold text-ink tabular-nums">
                     {formatInr(item.price)}
                   </td>
                   <td className="py-3 px-3 text-right font-mono tabular-nums">
@@ -187,7 +189,7 @@ export function ApparelProductsView({
                       className={
                         item.stockQuantity <= item.lowStockThreshold
                           ? 'font-bold text-red-700 dark:text-red-400'
-                          : 'text-slate-700 dark:text-slate-300'
+                          : 'text-ink-secondary'
                       }
                     >
                       {item.stockQuantity}
@@ -200,7 +202,7 @@ export function ApparelProductsView({
                       className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
                         item.isAvailable
                           ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
-                          : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                          : 'bg-subtle text-ink-muted'
                       }`}
                     >
                       {item.isAvailable ? 'In Catalog' : 'Archived'}
@@ -232,26 +234,26 @@ export function ApparelCategoriesView({
         return (
           <div
             key={cat.id}
-            className="rounded-xl border border-slate-200 bg-white p-5 flex flex-col justify-between dark:border-slate-800 dark:bg-[#111827]"
+            className="rounded-xl border border-line bg-surface p-5 flex flex-col justify-between"
           >
             <div>
               <div className="flex items-baseline justify-between gap-2">
-                <h3 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="font-display text-base font-semibold text-ink">
                   {cat.name}
                 </h3>
-                <span className="font-mono text-xs text-slate-400">{count} SKUs</span>
+                <span className="font-mono text-xs text-ink-muted">{count} SKUs</span>
               </div>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{cat.description}</p>
+              <p className="mt-1 text-xs text-ink-muted">{cat.description}</p>
             </div>
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-slate-800">
-              <span className="font-mono text-[11px] text-slate-400">Sort #{cat.sortOrder}</span>
+            <div className="mt-4 flex items-center justify-between border-t border-line-subtle pt-3">
+              <span className="font-mono text-[11px] text-ink-muted">Sort #{cat.sortOrder}</span>
               <button
                 type="button"
                 onClick={() => onToggleCategory(cat.id)}
                 className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
                   cat.enabled
                     ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
-                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                    : 'bg-subtle text-ink-muted'
                 }`}
               >
                 {cat.enabled ? 'Visible' : 'Hidden'}
@@ -272,11 +274,11 @@ export function ApparelInventoryView({
   onAdjustStock: (id: string, delta: number) => void;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
+    <div className="rounded-xl border border-line bg-surface overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
+            <tr className="border-b border-line bg-subtle text-ink-muted">
               <th className="py-3 pl-5 pr-3">Garment SKU</th>
               <th className="py-3 px-3">Size Run</th>
               <th className="py-3 px-3 text-right">Current Units</th>
@@ -285,24 +287,24 @@ export function ApparelInventoryView({
               <th className="py-3 pl-3 pr-5 text-right">Warehouse Adjustment</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-line-subtle">
             {products.map((item) => {
               const low = item.stockQuantity <= item.lowStockThreshold;
               return (
-                <tr key={item.id}>
+                <tr key={item.id} className="hover:bg-hover transition-colors">
                   <td className="py-3 pl-5 pr-3">
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    <span className="font-semibold text-ink">
                       {item.name}
                     </span>
-                    <span className="block font-mono text-[11px] text-slate-400">{item.sku}</span>
+                    <span className="block font-mono text-[11px] text-ink-muted">{item.sku}</span>
                   </td>
-                  <td className="py-3 px-3 font-mono text-slate-600 dark:text-slate-300">
+                  <td className="py-3 px-3 font-mono text-ink-secondary">
                     {item.sizesAvailable}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                  <td className="py-3 px-3 text-right font-mono font-bold text-ink tabular-nums">
                     {item.stockQuantity}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono text-slate-500 tabular-nums">
+                  <td className="py-3 px-3 text-right font-mono text-ink-muted tabular-nums">
                     {item.lowStockThreshold}
                   </td>
                   <td className="py-3 px-3">
@@ -320,14 +322,14 @@ export function ApparelInventoryView({
                     <button
                       type="button"
                       onClick={() => onAdjustStock(item.id, -1)}
-                      className="rounded border border-slate-200 px-2 py-1 font-mono hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                      className="rounded border border-line bg-surface px-2 py-1 font-mono text-ink-secondary hover:bg-hover hover:text-ink"
                     >
                       -1
                     </button>
                     <button
                       type="button"
                       onClick={() => onAdjustStock(item.id, 10)}
-                      className="rounded bg-slate-900 px-2.5 py-1 font-mono font-semibold text-white dark:bg-slate-100 dark:text-slate-900"
+                      className="rounded bg-accent px-2.5 py-1 font-mono font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
                     >
                       +10 Restock
                     </button>
@@ -354,14 +356,14 @@ export function ApparelDeliveryView({
       {zones.map((z) => (
         <div
           key={z.id}
-          className="rounded-xl border border-slate-200 bg-white p-5 space-y-3 dark:border-slate-800 dark:bg-[#111827]"
+          className="rounded-xl border border-line bg-surface p-5 space-y-3"
         >
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h3 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="font-display text-base font-semibold text-ink">
                 {z.name}
               </h3>
-              <p className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="font-mono text-[11px] text-ink-muted">
                 Pincodes: {z.pincodes}
               </p>
             </div>
@@ -371,28 +373,28 @@ export function ApparelDeliveryView({
               className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
                 z.active
                   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
-                  : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                  : 'bg-subtle text-ink-muted'
               }`}
             >
               {z.active ? 'Active' : 'Paused'}
             </button>
           </div>
-          <div className="border-t border-slate-100 pt-3 grid grid-cols-3 gap-2 text-xs dark:border-slate-800">
+          <div className="border-t border-line-subtle pt-3 grid grid-cols-3 gap-2 text-xs">
             <div>
-              <span className="block text-slate-400">Fee</span>
-              <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+              <span className="block text-ink-muted">Fee</span>
+              <span className="font-mono font-semibold text-ink">
                 {formatInr(z.fee)}
               </span>
             </div>
             <div>
-              <span className="block text-slate-400">Free Above</span>
-              <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+              <span className="block text-ink-muted">Free Above</span>
+              <span className="font-mono font-semibold text-ink">
                 {formatInr(z.minOrder)}
               </span>
             </div>
             <div>
-              <span className="block text-slate-400">Transit ETA</span>
-              <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+              <span className="block text-ink-muted">Transit ETA</span>
+              <span className="font-mono font-semibold text-ink">
                 {z.etaWindow}
               </span>
             </div>
@@ -411,28 +413,28 @@ export function ApparelStaffView({
   onToggleStaffStatus: (id: string) => void;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-[#111827] overflow-hidden">
+    <div className="rounded-xl border border-line bg-surface overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-xs">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 dark:border-slate-800 dark:bg-slate-900/40 dark:text-slate-400">
+            <tr className="border-b border-line bg-subtle text-ink-muted">
               <th className="py-3 pl-5 pr-3">Staff Member</th>
               <th className="py-3 px-3">Role</th>
               <th className="py-3 px-3">Last Login</th>
               <th className="py-3 pl-3 pr-5 text-right">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+          <tbody className="divide-y divide-line-subtle">
             {staff.map((m) => (
-              <tr key={m.id}>
+              <tr key={m.id} className="hover:bg-hover transition-colors">
                 <td className="py-3 pl-5 pr-3">
-                  <p className="font-semibold text-slate-900 dark:text-slate-100">{m.name}</p>
-                  <p className="text-slate-500 dark:text-slate-400">{m.email}</p>
+                  <p className="font-semibold text-ink">{m.name}</p>
+                  <p className="text-ink-muted">{m.email}</p>
                 </td>
-                <td className="py-3 px-3 font-medium text-slate-800 dark:text-slate-200">
+                <td className="py-3 px-3 font-medium text-ink-secondary">
                   {m.role}
                 </td>
-                <td className="py-3 px-3 font-mono text-slate-500 dark:text-slate-400">
+                <td className="py-3 px-3 font-mono text-ink-muted">
                   {m.lastLogin}
                 </td>
                 <td className="py-3 pl-3 pr-5 text-right">
@@ -459,9 +461,17 @@ export function ApparelStaffView({
 
 export function ApparelSettingsView({
   settings,
+  themePreset,
+  isDark,
+  onChangeThemePreset,
+  onToggleDark,
   onSaveSettings,
 }: {
   settings: BusinessSettings;
+  themePreset: ThemePreset;
+  isDark: boolean;
+  onChangeThemePreset: (preset: ThemePreset) => void;
+  onToggleDark: () => void;
   onSaveSettings: (next: BusinessSettings) => void;
 }) {
   const [draft, setDraft] = useState(settings);
@@ -472,79 +482,154 @@ export function ApparelSettingsView({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-2xl rounded-xl border border-slate-200 bg-white p-6 space-y-4 dark:border-slate-800 dark:bg-[#111827]"
-    >
-      <h2 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100">
-        Apparel Storefront &amp; GST Configuration
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-        <div>
-          <label className="block font-medium text-slate-500">Brand Name</label>
-          <input
-            type="text"
-            value={draft.brandName}
-            onChange={(e) => setDraft({ ...draft, brandName: e.target.value })}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
+    <div className="space-y-6 max-w-3xl">
+      {/* Admin Panel Theme & Appearance */}
+      <section className="rounded-xl border border-line bg-surface p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 className="font-display text-base font-semibold text-ink">
+              Admin Panel Theme &amp; Appearance
+            </h2>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              Choose a curated color palette and surface luminance for Kova Studio Admin.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onToggleDark}
+            className="inline-flex items-center gap-2 rounded-lg border border-line bg-subtle px-3 py-1.5 text-xs font-semibold text-ink hover:bg-hover self-start transition-colors"
+          >
+            {isDark ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            <span>{isDark ? 'Dark Mode Active' : 'Light Mode Active'}</span>
+          </button>
         </div>
-        <div>
-          <label className="block font-medium text-slate-500">Phone</label>
-          <input
-            type="text"
-            value={draft.phone}
-            onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {THEME_PRESETS.map((preset) => {
+            const active = themePreset === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => onChangeThemePreset(preset.id)}
+                className={`flex items-center justify-between gap-3 rounded-xl border p-4 text-left transition-colors ${
+                  active
+                    ? 'border-accent bg-accent-soft'
+                    : 'border-line bg-surface hover:border-accent/50'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex shrink-0 overflow-hidden rounded-lg border border-line">
+                    <span
+                      className="h-9 w-4"
+                      style={{ backgroundColor: preset.sidebarHex }}
+                      aria-hidden="true"
+                    />
+                    <span
+                      className="h-9 w-4"
+                      style={{
+                        backgroundColor: isDark ? preset.darkCanvasHex : preset.canvasHex,
+                      }}
+                      aria-hidden="true"
+                    />
+                    <span
+                      className="h-9 w-4"
+                      style={{
+                        backgroundColor: isDark ? preset.darkAccentHex : preset.accentHex,
+                      }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-ink truncate">{preset.name}</p>
+                    <p className="text-[11px] text-ink-muted truncate">{preset.subtitle}</p>
+                  </div>
+                </div>
+                {active && (
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink">
+                    <Check className="h-3 w-3" aria-hidden="true" />
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
-        <div>
-          <label className="block font-medium text-slate-500">Email</label>
-          <input
-            type="email"
-            value={draft.email}
-            onChange={(e) => setDraft({ ...draft, email: e.target.value })}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
+      </section>
+
+      <form
+        onSubmit={handleSubmit}
+        className="rounded-xl border border-line bg-surface p-6 space-y-4"
+      >
+        <h2 className="font-display text-base font-semibold text-ink">
+          Apparel Storefront &amp; GST Configuration
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div>
+            <label className="block font-medium text-ink-muted">Brand Name</label>
+            <input
+              type="text"
+              value={draft.brandName}
+              onChange={(e) => setDraft({ ...draft, brandName: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block font-medium text-ink-muted">Phone</label>
+            <input
+              type="text"
+              value={draft.phone}
+              onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block font-medium text-ink-muted">Email</label>
+            <input
+              type="email"
+              value={draft.email}
+              onChange={(e) => setDraft({ ...draft, email: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block font-medium text-ink-muted">Apparel GST Rate (%)</label>
+            <input
+              type="number"
+              min={0}
+              max={28}
+              value={draft.gstRatePct}
+              onChange={(e) => setDraft({ ...draft, gstRatePct: Number(e.target.value) })}
+              className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 font-mono text-sm text-ink focus:border-accent focus:outline-none"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block font-medium text-ink-muted">Flagship &amp; Warehouse Address</label>
+            <input
+              type="text"
+              value={draft.address}
+              onChange={(e) => setDraft({ ...draft, address: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block font-medium text-ink-muted">Flagship Hours</label>
+            <input
+              type="text"
+              value={draft.openingHours}
+              onChange={(e) => setDraft({ ...draft, openingHours: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+            />
+          </div>
         </div>
-        <div>
-          <label className="block font-medium text-slate-500">Apparel GST Rate (%)</label>
-          <input
-            type="number"
-            min={0}
-            max={28}
-            value={draft.gstRatePct}
-            onChange={(e) => setDraft({ ...draft, gstRatePct: Number(e.target.value) })}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
+        <div className="pt-2 flex justify-end">
+          <button
+            type="submit"
+            className="rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
+          >
+            Save Settings
+          </button>
         </div>
-        <div className="sm:col-span-2">
-          <label className="block font-medium text-slate-500">Flagship &amp; Warehouse Address</label>
-          <input
-            type="text"
-            value={draft.address}
-            onChange={(e) => setDraft({ ...draft, address: e.target.value })}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
-        </div>
-        <div className="sm:col-span-2">
-          <label className="block font-medium text-slate-500">Flagship Hours</label>
-          <input
-            type="text"
-            value={draft.openingHours}
-            onChange={(e) => setDraft({ ...draft, openingHours: e.target.value })}
-            className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-          />
-        </div>
-      </div>
-      <div className="pt-2 flex justify-end">
-        <button
-          type="submit"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
-        >
-          Save Settings
-        </button>
-      </div>
-    </form>
+      </form>
+    </div>
   );
 }

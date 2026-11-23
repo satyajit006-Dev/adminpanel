@@ -111,17 +111,17 @@ export function ApparelOrderDrawer({
         role="dialog"
         aria-modal="true"
         aria-label={`Order details for ${order.orderNumber}`}
-        className="relative z-50 flex h-full w-full max-w-2xl flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-[#111827] overflow-hidden"
+        className="relative z-50 flex h-full w-full max-w-2xl flex-col border-l border-line bg-surface shadow-2xl overflow-hidden"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+        <div className="flex items-start justify-between gap-4 border-b border-line px-6 py-4">
           <div>
             <div className="flex items-center gap-3">
-              <h2 className="font-mono text-lg font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="font-mono text-lg font-bold text-ink">
                 {order.orderNumber}
               </h2>
               <OrderStatusText status={order.orderStatus} />
             </div>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+            <p className="mt-0.5 text-xs text-ink-muted font-mono tabular-nums">
               {order.orderType} · Received {formatDateTime(order.createdAt)} · Processing time:{' '}
               {elapsedMinutes}m
             </p>
@@ -131,7 +131,7 @@ export function ApparelOrderDrawer({
             type="button"
             onClick={onClose}
             aria-label="Close order drawer"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+            className="rounded-lg p-1.5 text-ink-muted hover:bg-hover hover:text-ink"
           >
             <X className="h-5 w-5" />
           </button>
@@ -143,7 +143,7 @@ export function ApparelOrderDrawer({
             <button
               type="button"
               onClick={() => onPrintDocument(order, 'packing_slip')}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
             >
               <Printer className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Print Packing Slip</span>
@@ -151,14 +151,14 @@ export function ApparelOrderDrawer({
             <button
               type="button"
               onClick={() => onPrintDocument(order, 'invoice')}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
             >
               <Printer className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Print Customer Invoice</span>
             </button>
             <a
               href={`tel:${order.customerPhone}`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
             >
               <Phone className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Call</span>
@@ -175,9 +175,9 @@ export function ApparelOrderDrawer({
           </div>
 
           {/* Fulfillment Workflow Stepper */}
-          <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-900/50">
+          <section className="rounded-xl border border-line bg-subtle p-4">
             <div className="flex items-center justify-between gap-2 mb-3">
-              <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="text-xs font-semibold text-ink">
                 Fulfillment Workflow
               </h3>
               {ongoing && !cancelOpen && (
@@ -217,10 +217,10 @@ export function ApparelOrderDrawer({
                       onClick={() => onUpdateStatus(order, step)}
                       className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
                         isCurrent
-                          ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                          ? 'bg-accent text-accent-ink'
                           : isCompleted
                             ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400'
-                            : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+                            : 'border border-line bg-surface text-ink-secondary hover:bg-hover hover:text-ink'
                       }`}
                     >
                       {isCompleted && !isCurrent && (
@@ -236,9 +236,9 @@ export function ApparelOrderDrawer({
             {cancelOpen && (
               <form
                 onSubmit={handleCancelSubmit}
-                className="mt-3 border-t border-slate-200 pt-3 space-y-2.5 dark:border-slate-800"
+                className="mt-3 border-t border-line pt-3 space-y-2.5"
               >
-                <label className="block text-xs font-medium text-slate-900 dark:text-slate-100">
+                <label className="block text-xs font-medium text-ink">
                   Cancellation / Rejection Reason *
                 </label>
                 <input
@@ -247,13 +247,13 @@ export function ApparelOrderDrawer({
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
                   placeholder="e.g. Requested size out of stock, customer requested cancellation..."
-                  className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                  className="w-full rounded-md border border-line bg-surface px-3 py-1.5 text-xs text-ink"
                 />
                 <div className="flex items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setCancelOpen(false)}
-                    className="px-3 py-1 text-xs text-slate-500"
+                    className="px-3 py-1 text-xs text-ink-muted hover:text-ink"
                   >
                     Keep Order
                   </button>
@@ -269,28 +269,28 @@ export function ApparelOrderDrawer({
           </section>
 
           {/* Customer & Shipping */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl border border-slate-200 p-4 text-xs dark:border-slate-800">
+          <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 rounded-xl border border-line p-4 text-xs">
             <div>
-              <h3 className="font-semibold text-slate-500 dark:text-slate-400">Customer</h3>
-              <p className="mt-1 font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="font-semibold text-ink-muted">Customer</h3>
+              <p className="mt-1 font-semibold text-ink">
                 {order.customerName}
               </p>
-              <p className="mt-0.5 font-mono text-slate-700 dark:text-slate-300">
+              <p className="mt-0.5 font-mono text-ink-secondary">
                 {order.customerPhone}
               </p>
-              <p className="mt-0.5 text-slate-500 dark:text-slate-400">{order.customerEmail}</p>
+              <p className="mt-0.5 text-ink-muted">{order.customerEmail}</p>
             </div>
             <div>
-              <h3 className="font-semibold text-slate-500 dark:text-slate-400">
+              <h3 className="font-semibold text-ink-muted">
                 Fulfillment ({order.orderType})
               </h3>
-              <p className="mt-1 text-slate-900 dark:text-slate-100">
+              <p className="mt-1 text-ink">
                 {order.orderType === 'Delivery'
                   ? order.deliveryAddress ?? 'Address pending'
                   : 'Lavelle Road Flagship Pickup Desk'}
               </p>
               {order.customerInstructions && (
-                <p className="mt-1.5 text-slate-700 dark:text-slate-300 font-medium">
+                <p className="mt-1.5 text-ink-secondary font-medium">
                   Note: &ldquo;{order.customerInstructions}&rdquo;
                 </p>
               )}
@@ -298,49 +298,49 @@ export function ApparelOrderDrawer({
           </section>
 
           {/* Garments & Invoice Breakdown */}
-          <section className="rounded-xl border border-slate-200 overflow-hidden dark:border-slate-800">
-            <div className="border-b border-slate-200 bg-slate-50 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-300">
-              Garments & Sizing
+          <section className="rounded-xl border border-line overflow-hidden">
+            <div className="border-b border-line bg-subtle px-4 py-2.5 text-xs font-semibold text-ink-secondary">
+              Garments &amp; Sizing
             </div>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            <div className="divide-y divide-line-subtle">
               {order.items.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between gap-4 px-4 py-2.5 text-xs"
                 >
                   <div>
-                    <span className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+                    <span className="font-mono font-semibold text-ink">
                       {item.quantity}×
                     </span>{' '}
-                    <span className="font-medium text-slate-900 dark:text-slate-100">
+                    <span className="font-medium text-ink">
                       {item.name}
                     </span>
-                    <span className="block font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="block font-mono text-[11px] text-ink-muted">
                       {item.sku} · {item.variant}
                     </span>
                   </div>
-                  <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                  <span className="font-mono font-semibold text-ink tabular-nums">
                     {formatInr(item.quantity * item.unitPrice)}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="border-t border-slate-200 bg-slate-50/70 px-4 py-3 space-y-1 text-xs dark:border-slate-800 dark:bg-slate-900/40">
-              <div className="flex justify-between text-slate-500">
+            <div className="border-t border-line bg-subtle px-4 py-3 space-y-1 text-xs">
+              <div className="flex justify-between text-ink-muted">
                 <span>Subtotal</span>
                 <span className="font-mono tabular-nums">{formatInr(order.subtotal)}</span>
               </div>
-              <div className="flex justify-between text-slate-500">
+              <div className="flex justify-between text-ink-muted">
                 <span>GST</span>
                 <span className="font-mono tabular-nums">{formatInr(order.tax)}</span>
               </div>
               {order.shippingFee > 0 && (
-                <div className="flex justify-between text-slate-500">
+                <div className="flex justify-between text-ink-muted">
                   <span>Shipping Fee</span>
                   <span className="font-mono tabular-nums">{formatInr(order.shippingFee)}</span>
                 </div>
               )}
-              <div className="flex justify-between pt-1.5 border-t border-slate-200 font-semibold text-slate-900 dark:border-slate-700 dark:text-slate-100">
+              <div className="flex justify-between pt-1.5 border-t border-line font-semibold text-ink">
                 <span>Total Payable</span>
                 <span className="font-mono text-sm tabular-nums">
                   {formatInr(order.totalAmount)}
@@ -352,33 +352,33 @@ export function ApparelOrderDrawer({
           {/* Linked Transactions */}
           <section className="space-y-2">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                Payment & Traceable Transactions
+              <h3 className="text-xs font-semibold text-ink">
+                Payment &amp; Traceable Transactions
               </h3>
               <PaymentStateText state={order.paymentStatus} />
             </div>
 
             {linkedTx.length === 0 ? (
-              <p className="text-xs text-slate-500">No transaction record linked.</p>
+              <p className="text-xs text-ink-muted">No transaction record linked.</p>
             ) : (
-              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 dark:divide-slate-800 dark:border-slate-800">
+              <div className="divide-y divide-line-subtle rounded-xl border border-line">
                 {linkedTx.map((tx) => (
                   <div
                     key={tx.id}
                     className="flex items-center justify-between gap-3 p-3.5 text-xs"
                   >
                     <div>
-                      <p className="font-mono font-semibold text-slate-900 dark:text-slate-100">
+                      <p className="font-mono font-semibold text-ink">
                         {tx.id} · {tx.paymentMethod} ({tx.gatewayProvider})
                       </p>
-                      <p className="mt-0.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                      <p className="mt-0.5 font-mono text-[11px] text-ink-muted">
                         Ref: {tx.gatewayReference ?? 'Pending'} · Status: {tx.status}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => onOpenTransaction(tx)}
-                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                      className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink"
                     >
                       <span>Open Txn</span>
                       <ExternalLink className="h-3 w-3" aria-hidden="true" />
@@ -393,7 +393,7 @@ export function ApparelOrderDrawer({
           <section className="space-y-2">
             <label
               htmlFor="apparel-staff-notes"
-              className="block text-xs font-semibold text-slate-900 dark:text-slate-100"
+              className="block text-xs font-semibold text-ink"
             >
               Internal Warehouse / Stylist Notes
             </label>
@@ -404,12 +404,12 @@ export function ApparelOrderDrawer({
                 value={notesDraft}
                 onChange={(e) => setNotesDraft(e.target.value)}
                 placeholder="Add tailoring, QC, or courier handoff note..."
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                className="flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
               />
               <button
                 type="button"
                 onClick={() => onSaveStaffNotes(order.id, notesDraft)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
               >
                 <Save className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>Save</span>
@@ -418,26 +418,26 @@ export function ApparelOrderDrawer({
           </section>
 
           {/* Status History & Logs */}
-          <section className="border-t border-slate-200 pt-4 dark:border-slate-800">
-            <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100 mb-3">
-              Status History & Activity Log
+          <section className="border-t border-line pt-4">
+            <h3 className="text-xs font-semibold text-ink mb-3">
+              Status History &amp; Activity Log
             </h3>
             <div className="space-y-2 text-xs">
               {orderHistory.map((h) => (
                 <div
                   key={h.id}
-                  className="flex items-baseline justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/60"
+                  className="flex items-baseline justify-between gap-3 rounded-lg bg-subtle px-3 py-2"
                 >
                   <div>
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
+                    <span className="font-semibold text-ink">
                       {h.previousStatus === 'none'
                         ? `Created → ${ORDER_STATUS_LABELS[h.newStatus]}`
                         : `${ORDER_STATUS_LABELS[h.previousStatus]} → ${ORDER_STATUS_LABELS[h.newStatus]}`}
                     </span>
-                    <span className="ml-2 text-slate-500">by {h.changedBy}</span>
-                    {h.note && <p className="text-[11px] text-slate-600 dark:text-slate-400">{h.note}</p>}
+                    <span className="ml-2 text-ink-muted">by {h.changedBy}</span>
+                    {h.note && <p className="text-[11px] text-ink-secondary">{h.note}</p>}
                   </div>
-                  <span className="font-mono text-[10px] text-slate-400 shrink-0">
+                  <span className="font-mono text-[10px] text-ink-muted shrink-0">
                     {formatDateTime(h.timestamp)}
                   </span>
                 </div>
@@ -445,15 +445,15 @@ export function ApparelOrderDrawer({
               {orderLogs.map((l) => (
                 <div
                   key={l.id}
-                  className="flex items-baseline justify-between gap-3 rounded-lg border border-slate-100 px-3 py-2 dark:border-slate-800"
+                  className="flex items-baseline justify-between gap-3 rounded-lg border border-line-subtle px-3 py-2"
                 >
                   <div>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    <span className="font-semibold text-ink">
                       {l.action}:
                     </span>{' '}
-                    <span className="text-slate-600 dark:text-slate-300">{l.details}</span>
+                    <span className="text-ink-secondary">{l.details}</span>
                   </div>
-                  <span className="font-mono text-[10px] text-slate-400 shrink-0">
+                  <span className="font-mono text-[10px] text-ink-muted shrink-0">
                     {formatDateTime(l.timestamp)}
                   </span>
                 </div>

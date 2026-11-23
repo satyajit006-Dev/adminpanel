@@ -27,7 +27,7 @@ export function OrderStatusText({ status }: { status: OrderStatus }) {
       );
     case 'confirmed':
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-secondary whitespace-nowrap">
           <CheckCircle2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span>{ORDER_STATUS_LABELS[status]}</span>
         </span>
@@ -97,7 +97,7 @@ export function TransactionStatusText({ status }: { status: TransactionStatus })
     case 'refunded':
     case 'partially_refunded':
       return (
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-secondary whitespace-nowrap">
           <RotateCcw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span>{TX_STATUS_LABELS[status]}</span>
         </span>
@@ -121,7 +121,7 @@ export function PaymentStateText({ state }: { state: OrderPaymentState }) {
     );
   }
   return (
-    <span className="text-xs font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">
+    <span className="text-xs font-medium text-ink-secondary whitespace-nowrap">
       {state}
     </span>
   );
