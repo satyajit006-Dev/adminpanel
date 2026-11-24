@@ -1,6 +1,5 @@
 import { ArrowRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { HISTORICAL_DAILY_SALES, HISTORICAL_MONTHLY_SALES } from '../../data/apparelSeedData';
 import type {
   ApparelOrder,
   ApparelProduct,
@@ -76,19 +75,21 @@ export function ApparelDashboardView({
     const completedWithTime = orders.filter((o) => o.completedAt);
     const avgProcessingMins =
       completedWithTime.length > 0
-        ? completedWithTime.reduce((sum, o) => {
-            const diff =
-              (new Date(o.completedAt!).getTime() - new Date(o.createdAt).getTime()) /
-              60_000;
-            return sum + Math.max(5, Math.min(diff, 180));
-          }, 0) / completedWithTime.length
-        : 34;
+        ? Math.round(
+            completedWithTime.reduce((sum, o) => {
+              const diff =
+                (new Date(o.completedAt!).getTime() - new Date(o.createdAt).getTime()) /
+                60_000;
+              return sum + Math.max(1, diff);
+            }, 0) / completedWithTime.length
+          )
+        : null;
 
     const methodCounts = new Map<string, number>();
     for (const tx of transactions) {
       methodCounts.set(tx.paymentMethod, (methodCounts.get(tx.paymentMethod) ?? 0) + 1);
     }
-    let mostUsedMethod = 'UPI';
+    let mostUsedMethod: string | null = null;
     let highestCount = 0;
     for (const [method, cnt] of methodCounts.entries()) {
       if (cnt > highestCount) {
@@ -105,22 +106,55 @@ export function ApparelDashboardView({
       pendingAmount,
       aov,
       cancellationRate,
-      avgProcessingMins: Math.round(avgProcessingMins),
+      avgProcessingMins,
       mostUsedMethod,
       mostUsedCount: highestCount,
     };
   }, [orders, transactions]);
 
   const chartSeries = useMemo(() => {
+    const now = new Date();
+    const settledTx = transactions.filter(
+      (t) => t.status === 'success' || t.status === 'partially_refunded'
+    );
+
     if (salesView === 'daily') {
-      const todayOrdersCount = orders.filter((o) => isSameLocalDay(o.createdAt)).length;
-      return [
-        ...HISTORICAL_DAILY_SALES,
-        { label: 'Today', revenue: analytics.todayNet, orders: todayOrdersCount },
-      ];
+      const buckets: Array<{ label: string; revenue: number; orders: number }> = [];
+      for (let offset = 6; offset >= 0; offset--) {
+        const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
+        const label =
+          offset === 0
+            ? 'Today'
+            : day.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+        const dayRev = settledTx
+          .filter((t) => isSameLocalDay(t.createdAt, day))
+          .reduce((s, t) => s + (t.amount - t.refundedAmount), 0);
+        const dayOrders = orders.filter((o) => isSameLocalDay(o.createdAt, day)).length;
+        buckets.push({ label, revenue: dayRev, orders: dayOrders });
+      }
+      return buckets;
     }
-    return HISTORICAL_MONTHLY_SALES;
-  }, [salesView, analytics.todayNet, orders]);
+
+    const monthlyBuckets: Array<{ label: string; revenue: number; orders: number }> = [];
+    for (let offset = 5; offset >= 0; offset--) {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - offset, 1);
+      const y = monthDate.getFullYear();
+      const m = monthDate.getMonth();
+      const label = monthDate.toLocaleDateString('en-IN', { month: 'short' });
+      const monthRev = settledTx
+        .filter((t) => {
+          const d = new Date(t.createdAt);
+          return d.getFullYear() === y && d.getMonth() === m;
+        })
+        .reduce((s, t) => s + (t.amount - t.refundedAmount), 0);
+      const monthOrders = orders.filter((o) => {
+        const d = new Date(o.createdAt);
+        return d.getFullYear() === y && d.getMonth() === m;
+      }).length;
+      monthlyBuckets.push({ label, revenue: monthRev, orders: monthOrders });
+    }
+    return monthlyBuckets;
+  }, [salesView, orders, transactions]);
 
   const chartW = 780;
   const chartH = 220;
@@ -129,7 +163,8 @@ export function ApparelDashboardView({
   const padBot = 28;
   const plotW = chartW - padX * 2;
   const plotH = chartH - padTop - padBot;
-  const maxRev = Math.max(...chartSeries.map((p) => p.revenue), 1) * 1.15;
+  const hasAnyRevenue = chartSeries.some((p) => p.revenue > 0);
+  const maxRev = hasAnyRevenue ? Math.max(...chartSeries.map((p) => p.revenue)) * 1.15 : 10000;
 
   const ongoingOrders = useMemo(
     () => orders.filter((o) => isOngoingOrder(o.orderStatus)).slice(0, 5),
@@ -147,7 +182,7 @@ export function ApparelDashboardView({
   return (
     <div className="space-y-6">
       {/* Executive KPI Strip */}
-      <section aria-label="Clothing Business Key Metrics">
+      <section aria-label="Store Key Metrics">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
             type="button"
@@ -177,7 +212,9 @@ export function ApparelDashboardView({
               {formatInr(analytics.aov)}
             </p>
             <p className="mt-1.5 text-xs text-ink-muted font-mono tabular-nums">
-              Avg dispatch: {analytics.avgProcessingMins} mins · {analytics.cancellationRate.toFixed(1)}% cancel
+              Avg dispatch:{' '}
+              {analytics.avgProcessingMins !== null ? `${analytics.avgProcessingMins} mins` : '—'} ·{' '}
+              {analytics.cancellationRate.toFixed(1)}% cancel
             </p>
           </button>
 
@@ -206,10 +243,12 @@ export function ApparelDashboardView({
               User Accounts &amp; Top Method
             </p>
             <p className="mt-1.5 font-mono text-2xl font-bold text-ink tabular-nums">
-              {accounts.length} Accounts
+              {accounts.length} {accounts.length === 1 ? 'Account' : 'Accounts'}
             </p>
             <p className="mt-1.5 text-xs text-ink-muted font-mono tabular-nums">
-              Top method: {analytics.mostUsedMethod} ({analytics.mostUsedCount} txns)
+              {analytics.mostUsedMethod
+                ? `Top method: ${analytics.mostUsedMethod} (${analytics.mostUsedCount} txns)`
+                : 'No transactions yet'}
             </p>
           </button>
         </div>
@@ -221,11 +260,12 @@ export function ApparelDashboardView({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-line-subtle pb-4">
             <div>
               <h2 className="font-display text-base font-semibold text-ink">
-                {salesView === 'daily' ? 'Apparel Sales by Day' : 'Apparel Sales by Month'}
+                {salesView === 'daily' ? 'Sales by Day' : 'Sales by Month'}
               </h2>
               {activeBar && (
                 <p className="mt-0.5 font-mono text-xs text-ink-muted tabular-nums">
-                  {activeBar.label} · {formatInr(activeBar.revenue)} · {activeBar.orders} orders
+                  {activeBar.label} · {formatInr(activeBar.revenue)} · {activeBar.orders}{' '}
+                  {activeBar.orders === 1 ? 'order' : 'orders'}
                 </p>
               )}
             </div>
@@ -291,7 +331,7 @@ export function ApparelDashboardView({
                 const slotW = plotW / chartSeries.length;
                 const barW = Math.min(44, slotW * 0.55);
                 const x = padX + idx * slotW + (slotW - barW) / 2;
-                const barH = Math.max(4, (pt.revenue / maxRev) * plotH);
+                const barH = pt.revenue > 0 ? Math.max(4, (pt.revenue / maxRev) * plotH) : 2;
                 const y = padTop + plotH - barH;
                 const selected =
                   hoveredIdx === idx ||
@@ -310,7 +350,9 @@ export function ApparelDashboardView({
                       height={barH}
                       rx={4}
                       className={
-                        selected ? 'fill-accent transition-colors' : 'fill-chart-muted transition-colors'
+                        selected && pt.revenue > 0
+                          ? 'fill-accent transition-colors'
+                          : 'fill-chart-muted transition-colors'
                       }
                     />
                     <text
@@ -335,20 +377,34 @@ export function ApparelDashboardView({
           <div>
             <div className="flex items-center justify-between border-b border-line-subtle pb-4">
               <h2 className="font-display text-base font-semibold text-ink">
-                Low-Stock Garment SKUs
+                Low-Stock SKUs
               </h2>
               <button
                 type="button"
-                onClick={() => onNavigate('inventory')}
+                onClick={() => onNavigate(products.length === 0 ? 'website_upload' : 'inventory')}
                 className="text-xs font-semibold text-accent-text hover:underline"
               >
-                Manage Stock
+                {products.length === 0 ? 'Add Products' : 'Manage Stock'}
               </button>
             </div>
 
-            {lowStockItems.length === 0 ? (
+            {products.length === 0 ? (
+              <div className="mt-4 space-y-2">
+                <p className="text-xs text-ink-muted">
+                  No products in your catalog yet. Upload your first product to track inventory thresholds.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('website_upload')}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-accent-text hover:underline"
+                >
+                  <span>Upload to Website</span>
+                  <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                </button>
+              </div>
+            ) : lowStockItems.length === 0 ? (
               <p className="mt-4 text-xs text-emerald-700 dark:text-emerald-400">
-                All garment SKUs are adequately stocked.
+                All {products.length} SKUs are adequately stocked.
               </p>
             ) : (
               <div className="mt-4 divide-y divide-line-subtle">
@@ -394,7 +450,7 @@ export function ApparelDashboardView({
         <section className="rounded-xl border border-line bg-surface overflow-hidden">
           <div className="flex items-center justify-between border-b border-line-subtle px-5 py-3.5">
             <h2 className="font-display text-sm font-semibold text-ink">
-              Ongoing Apparel Orders
+              Ongoing Orders
             </h2>
             <button
               type="button"
@@ -405,31 +461,40 @@ export function ApparelDashboardView({
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
-          <div className="divide-y divide-line-subtle">
-            {ongoingOrders.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => onSelectOrder(o)}
-                className="w-full px-5 py-3 text-left flex items-center justify-between gap-3 hover:bg-hover transition-colors"
-              >
-                <div className="min-w-0">
-                  <p className="font-mono text-xs font-semibold text-ink">
-                    {o.orderNumber} · {o.customerName}
-                  </p>
-                  <p className="mt-0.5 text-xs text-ink-secondary truncate">
-                    {o.items.map((i) => `${i.quantity}× ${i.name} (${i.variant})`).join(', ')}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <OrderStatusText status={o.orderStatus} />
-                  <p className="mt-0.5 font-mono text-xs font-semibold text-ink tabular-nums">
-                    {formatInr(o.totalAmount)}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
+          {ongoingOrders.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-xs font-medium text-ink">No ongoing orders</p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Active storefront orders in fulfillment will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-line-subtle">
+              {ongoingOrders.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => onSelectOrder(o)}
+                  className="w-full px-5 py-3 text-left flex items-center justify-between gap-3 hover:bg-hover transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-semibold text-ink">
+                      {o.orderNumber} · {o.customerName}
+                    </p>
+                    <p className="mt-0.5 text-xs text-ink-secondary truncate">
+                      {o.items.map((i) => `${i.quantity}× ${i.name} (${i.variant})`).join(', ')}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <OrderStatusText status={o.orderStatus} />
+                    <p className="mt-0.5 font-mono text-xs font-semibold text-ink tabular-nums">
+                      {formatInr(o.totalAmount)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="rounded-xl border border-line bg-surface overflow-hidden">
@@ -446,31 +511,40 @@ export function ApparelDashboardView({
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           </div>
-          <div className="divide-y divide-line-subtle">
-            {recentTx.map((tx) => (
-              <button
-                key={tx.id}
-                type="button"
-                onClick={() => onSelectTransaction(tx)}
-                className="w-full px-5 py-3 text-left flex items-center justify-between gap-3 hover:bg-hover transition-colors"
-              >
-                <div className="min-w-0">
-                  <p className="font-mono text-xs font-semibold text-ink">
-                    {tx.id} · {tx.orderNumber}
-                  </p>
-                  <p className="mt-0.5 text-xs text-ink-secondary">
-                    {tx.customerName} · {tx.paymentMethod} · {formatDateTime(tx.createdAt)}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <TransactionStatusText status={tx.status} />
-                  <p className="mt-0.5 font-mono text-xs font-semibold text-ink tabular-nums">
-                    {formatInr(tx.amount)}
-                  </p>
-                </div>
-              </button>
-            ))}
-          </div>
+          {recentTx.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-xs font-medium text-ink">No transactions recorded yet</p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Payment gateway settlements and cash records will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-line-subtle">
+              {recentTx.map((tx) => (
+                <button
+                  key={tx.id}
+                  type="button"
+                  onClick={() => onSelectTransaction(tx)}
+                  className="w-full px-5 py-3 text-left flex items-center justify-between gap-3 hover:bg-hover transition-colors"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-semibold text-ink">
+                      {tx.id} · {tx.orderNumber}
+                    </p>
+                    <p className="mt-0.5 text-xs text-ink-secondary">
+                      {tx.customerName} · {tx.paymentMethod} · {formatDateTime(tx.createdAt)}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <TransactionStatusText status={tx.status} />
+                    <p className="mt-0.5 font-mono text-xs font-semibold text-ink tabular-nums">
+                      {formatInr(tx.amount)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>

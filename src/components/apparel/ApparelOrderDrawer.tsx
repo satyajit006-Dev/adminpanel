@@ -30,6 +30,7 @@ interface ApparelOrderDrawerProps {
   transactions: Transaction[];
   statusHistory: OrderStatusHistoryItem[];
   activityLogs: OrderActivityLog[];
+  brandName?: string;
   onClose: () => void;
   onUpdateStatus: (order: ApparelOrder, nextStatus: OrderStatus, note?: string) => void;
   onCancelOrder: (order: ApparelOrder, reason: string, isReject?: boolean) => void;
@@ -52,6 +53,7 @@ export function ApparelOrderDrawer({
   transactions,
   statusHistory,
   activityLogs,
+  brandName,
   onClose,
   onUpdateStatus,
   onCancelOrder,
@@ -88,8 +90,9 @@ export function ApparelOrderDrawer({
       : WORKFLOW_STEPS;
 
   const cleanPhone = order.customerPhone.replace(/[^\d]/g, '');
+  const storeTitle = brandName?.trim() || 'our store';
   const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-    `Hello ${order.customerName}, your Kova Studio order ${order.orderNumber} is currently ${ORDER_STATUS_LABELS[order.orderStatus]}.`
+    `Hello ${order.customerName}, your ${storeTitle} order ${order.orderNumber} is currently ${ORDER_STATUS_LABELS[order.orderStatus]}.`
   )}`;
 
   const handleCancelSubmit = (e: React.FormEvent) => {
@@ -287,7 +290,7 @@ export function ApparelOrderDrawer({
               <p className="mt-1 text-ink">
                 {order.orderType === 'Delivery'
                   ? order.deliveryAddress ?? 'Address pending'
-                  : 'Lavelle Road Flagship Pickup Desk'}
+                  : 'Store Pickup Counter'}
               </p>
               {order.customerInstructions && (
                 <p className="mt-1.5 text-ink-secondary font-medium">

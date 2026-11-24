@@ -1,4 +1,4 @@
-import { Bell, Check, Menu, Moon, Palette, Plus, Sun, UserPlus } from 'lucide-react';
+import { Bell, Check, Menu, Moon, Palette, Sun, UploadCloud, UserPlus } from 'lucide-react';
 import { useState } from 'react';
 import type { ApparelRoute, LiveNotification, ThemePreset } from '../../types/apparel';
 import { formatTimeOnly } from '../../utils/apparelFormatters';
@@ -6,13 +6,14 @@ import { THEME_PRESETS } from '../../utils/themes';
 
 interface ApparelTopBarProps {
   activeRoute: ApparelRoute;
+  brandName: string;
   isDark: boolean;
   onToggleTheme: () => void;
   themePreset: ThemePreset;
   onChangeThemePreset: (preset: ThemePreset) => void;
   onOpenMobileMenu: () => void;
-  onSimulateIncomingOrder: () => void;
   onOpenNewAccount: () => void;
+  onOpenWebsiteUpload: () => void;
   notifications: LiveNotification[];
   onMarkAllRead: () => void;
   onSelectOrderFromNotification: (orderId: string) => void;
@@ -28,6 +29,7 @@ const ROUTE_TITLES: Record<ApparelRoute, string> = {
   refunds: 'Refunds',
   financial_reports: 'Financial Reports',
   products: 'Apparel Products',
+  website_upload: 'Upload to Website',
   categories: 'Categories',
   inventory: 'Inventory',
   accounts: 'User Accounts',
@@ -38,13 +40,14 @@ const ROUTE_TITLES: Record<ApparelRoute, string> = {
 
 export function ApparelTopBar({
   activeRoute,
+  brandName,
   isDark,
   onToggleTheme,
   themePreset,
   onChangeThemePreset,
   onOpenMobileMenu,
-  onSimulateIncomingOrder,
   onOpenNewAccount,
+  onOpenWebsiteUpload,
   notifications,
   onMarkAllRead,
   onSelectOrderFromNotification,
@@ -68,7 +71,7 @@ export function ApparelTopBar({
 
         <div className="flex items-center gap-2 min-w-0">
           <span className="hidden sm:inline text-xs font-medium text-ink-muted whitespace-nowrap">
-            Kova Studio
+            {brandName || 'Apparel Admin'}
           </span>
           <span className="hidden sm:inline text-line" aria-hidden="true">
             /
@@ -90,16 +93,16 @@ export function ApparelTopBar({
             <UserPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>New Account</span>
           </button>
-        ) : (
+        ) : activeRoute !== 'website_upload' ? (
           <button
             type="button"
-            onClick={onSimulateIncomingOrder}
+            onClick={onOpenWebsiteUpload}
             className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors whitespace-nowrap shrink-0"
           >
-            <Plus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>Simulate Order</span>
+            <UploadCloud className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>Upload to Website</span>
           </button>
-        )}
+        ) : null}
 
         {/* Notifications Popover */}
         <div className="relative">

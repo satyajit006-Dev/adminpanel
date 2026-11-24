@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Shirt,
   Truck,
+  UploadCloud,
   Users,
   X,
 } from 'lucide-react';
@@ -26,10 +27,11 @@ interface ApparelSidebarProps {
   pendingTxCount: number;
   lowStockCount: number;
   accountCount: number;
-  realtimeConnected: boolean;
   mobileOpen: boolean;
   onCloseMobile: () => void;
   brandName: string;
+  adminName?: string;
+  adminEmail?: string;
 }
 
 interface NavGroup {
@@ -39,7 +41,6 @@ interface NavGroup {
     label: string;
     icon: typeof LayoutDashboard;
     badge?: number | string;
-    isLive?: boolean;
   }>;
 }
 
@@ -50,11 +51,15 @@ export function ApparelSidebar({
   pendingTxCount,
   lowStockCount,
   accountCount,
-  realtimeConnected,
   mobileOpen,
   onCloseMobile,
   brandName,
+  adminName,
+  adminEmail,
 }: ApparelSidebarProps) {
+  const operatorName = adminName?.trim() || 'Store Admin';
+  const operatorSub = adminEmail?.trim() || 'Operations Administrator';
+
   const groups: NavGroup[] = [
     {
       heading: 'Overview',
@@ -67,8 +72,7 @@ export function ApparelSidebar({
           id: 'live_orders',
           label: 'Live Orders',
           icon: Radio,
-          badge: liveOrderCount,
-          isLive: true,
+          badge: liveOrderCount > 0 ? liveOrderCount : undefined,
         },
         { id: 'all_orders', label: 'All Orders', icon: ClipboardList },
         { id: 'completed_orders', label: 'Completed Orders', icon: CheckCircle2 },
@@ -95,9 +99,10 @@ export function ApparelSidebar({
           id: 'accounts',
           label: 'User Accounts',
           icon: Users,
-          badge: accountCount,
+          badge: accountCount > 0 ? accountCount : undefined,
         },
         { id: 'products', label: 'Apparel Products', icon: Shirt },
+        { id: 'website_upload', label: 'Upload to Website', icon: UploadCloud },
         { id: 'categories', label: 'Categories', icon: FolderTree },
         {
           id: 'inventory',
@@ -129,9 +134,9 @@ export function ApparelSidebar({
         <button
           type="button"
           onClick={() => handleSelect('dashboard')}
-          className="font-display text-lg font-bold tracking-tight text-sidebar-ink whitespace-nowrap shrink-0 text-left"
+          className="font-display text-lg font-bold tracking-tight text-sidebar-ink whitespace-nowrap truncate text-left"
         >
-          {brandName}
+          {brandName || 'Apparel Admin'}
         </button>
         <button
           type="button"
@@ -175,26 +180,15 @@ export function ApparelSidebar({
                       <span className="truncate">{item.label}</span>
                     </span>
 
-                    <span className="flex items-center gap-1.5 shrink-0">
-                      {item.isLive && (
-                        <span
-                          className={`text-[10px] font-mono ${
-                            active ? 'text-sidebar-active-muted font-semibold' : 'text-emerald-400'
-                          }`}
-                        >
-                          {realtimeConnected ? 'Live' : 'Paused'}
-                        </span>
-                      )}
-                      {item.badge !== undefined && (
-                        <span
-                          className={`font-mono text-[11px] tabular-nums ${
-                            active ? 'text-sidebar-active-muted' : 'text-sidebar-muted'
-                          }`}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                    </span>
+                    {item.badge !== undefined && (
+                      <span
+                        className={`font-mono text-[11px] tabular-nums shrink-0 ${
+                          active ? 'text-sidebar-active-muted' : 'text-sidebar-muted'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -205,17 +199,17 @@ export function ApparelSidebar({
 
       {/* Operator Footer */}
       <div className="border-t border-sidebar-border px-5 py-3.5 shrink-0">
-        <div className="flex items-center gap-3">
-          <Avatar
-            name="Claire Vance"
-            src="/src/assets/images/avatar_claire_vance_1795343354016.jpg"
-            size="sm"
-          />
+        <button
+          type="button"
+          onClick={() => handleSelect('settings')}
+          className="flex w-full items-center gap-3 text-left hover:opacity-90 transition-opacity"
+        >
+          <Avatar name={operatorName} size="sm" />
           <div className="min-w-0">
-            <p className="truncate text-xs font-semibold text-sidebar-ink">Claire Vance</p>
-            <p className="truncate text-[11px] text-sidebar-muted">Operations Admin · Apparel</p>
+            <p className="truncate text-xs font-semibold text-sidebar-ink">{operatorName}</p>
+            <p className="truncate text-[11px] text-sidebar-muted">{operatorSub}</p>
           </div>
-        </div>
+        </button>
       </div>
     </div>
   );

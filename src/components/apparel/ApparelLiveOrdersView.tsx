@@ -1,4 +1,4 @@
-import { Plus, Radio, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ApparelOrder, OrderStatus } from '../../types/apparel';
 import {
@@ -11,9 +11,6 @@ import { OrderStatusText, PaymentStateText } from './ApparelStatusText';
 
 interface ApparelLiveOrdersViewProps {
   orders: ApparelOrder[];
-  realtimeEnabled: boolean;
-  onToggleRealtime: () => void;
-  onSimulateOrder: () => void;
   onAdvanceOrderStatus: (order: ApparelOrder, nextStatus: OrderStatus) => void;
   onSelectOrder: (order: ApparelOrder) => void;
 }
@@ -41,9 +38,6 @@ function getNextWorkflowStep(order: ApparelOrder): { next: OrderStatus; label: s
 
 export function ApparelLiveOrdersView({
   orders,
-  realtimeEnabled,
-  onToggleRealtime,
-  onSimulateOrder,
   onAdvanceOrderStatus,
   onSelectOrder,
 }: ApparelLiveOrdersViewProps) {
@@ -134,51 +128,25 @@ export function ApparelLiveOrdersView({
 
   return (
     <div className="space-y-6">
-      {/* Live Stream Bar */}
+      {/* Filter & Search Bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onToggleRealtime}
-            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors whitespace-nowrap ${
-              realtimeEnabled
-                ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400'
-                : 'border-line bg-surface text-ink-secondary'
-            }`}
-          >
-            <Radio className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>Realtime Feed: {realtimeEnabled ? 'Active' : 'Paused'}</span>
-          </button>
+        <span className="font-mono text-xs text-ink-muted tabular-nums">
+          {ongoingOrders.length} active order{ongoingOrders.length === 1 ? '' : 's'} in fulfillment
+        </span>
 
-          <span className="font-mono text-xs text-ink-muted tabular-nums">
-            {ongoingOrders.length} active order{ongoingOrders.length === 1 ? '' : 's'}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="relative w-full sm:w-64">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted"
-              aria-hidden="true"
-            />
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search order ID, garment, SKU..."
-              aria-label="Search live orders"
-              className="w-full rounded-lg border border-line bg-surface py-1.5 pl-8 pr-3 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={onSimulateOrder}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink hover:bg-accent-hover whitespace-nowrap shrink-0 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Incoming Order</span>
-          </button>
+        <div className="relative w-full sm:w-72">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted"
+            aria-hidden="true"
+          />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search order ID, garment, SKU..."
+            aria-label="Search live orders"
+            className="w-full rounded-lg border border-line bg-surface py-1.5 pl-8 pr-3 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+          />
         </div>
       </div>
 
@@ -232,7 +200,7 @@ export function ApparelLiveOrdersView({
                 : 'No ongoing orders in this stage'}
             </p>
             <p className="mt-1 text-xs text-ink-muted">
-              New clothing orders will appear here in real time as customers check out.
+              Incoming storefront orders will appear here as customers check out.
             </p>
             {stageFilter !== 'all' && (
               <button

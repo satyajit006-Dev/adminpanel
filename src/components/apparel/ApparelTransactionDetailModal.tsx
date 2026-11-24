@@ -9,6 +9,7 @@ interface ApparelTransactionDetailModalProps {
   order: ApparelOrder | null;
   paymentEvents: PaymentEvent[];
   refunds: RefundRecord[];
+  brandName?: string;
   onClose: () => void;
   onOpenOrder: (order: ApparelOrder) => void;
   onPrintInvoice: (order: ApparelOrder) => void;
@@ -22,6 +23,7 @@ export function ApparelTransactionDetailModal({
   order,
   paymentEvents,
   refunds,
+  brandName,
   onClose,
   onOpenOrder,
   onPrintInvoice,
@@ -53,8 +55,9 @@ export function ApparelTransactionDetailModal({
   const txRefunds = refunds.filter((r) => r.transactionId === transaction.id);
 
   const handleDownloadReceipt = () => {
+    const headerTitle = `${(brandName?.trim() || 'STORE ADMIN').toUpperCase()} — PAYMENT RECEIPT`;
     const lines = [
-      'KOVA STUDIO — PAYMENT RECEIPT',
+      headerTitle,
       '==============================',
       `Transaction ID : ${transaction.id}`,
       `Order Number   : ${transaction.orderNumber}`,

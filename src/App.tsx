@@ -30,6 +30,7 @@ import {
 import { ApparelTopBar } from './components/apparel/ApparelTopBar';
 import { ApparelTransactionDetailModal } from './components/apparel/ApparelTransactionDetailModal';
 import { ApparelTransactionsView } from './components/apparel/ApparelTransactionsView';
+import { ApparelWebsiteUploadView } from './components/apparel/ApparelWebsiteUploadView';
 import { PrintApparelDocumentModal } from './components/apparel/PrintApparelDocumentModal';
 import {
   INITIAL_ACCOUNTS,
@@ -62,7 +63,6 @@ import type {
   OrderStatusHistoryItem,
   PaymentEvent,
   PaymentMethodConfig,
-  PaymentMethodType,
   RefundRecord,
   ShippingZone,
   StaffMember,
@@ -72,12 +72,30 @@ import type {
 } from './types/apparel';
 import {
   formatInr,
-  getNowTimestamp,
   isOngoingOrder,
   ORDER_STATUS_LABELS,
 } from './utils/apparelFormatters';
 
-const STORAGE_PREFIX = 'kova_apparel_admin_v1_';
+const STORAGE_PREFIX = 'apparel_admin_v2_';
+
+function cleanupLegacyStorage(): void {
+  try {
+    const toDelete: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('kova_apparel_admin_v1_') || k.startsWith('kova_website_'))) {
+        toDelete.push(k);
+      }
+    }
+    for (const k of toDelete) {
+      localStorage.removeItem(k);
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+cleanupLegacyStorage();
 
 function loadState<T>(key: string, fallback: T): T {
   try {
@@ -96,15 +114,6 @@ function saveState<T>(key: string, value: T): void {
     // ignore storage quota errors
   }
 }
-
-const GARMENT_VARIANTS = [
-  'Camel · Size M',
-  'Charcoal · Size L',
-  'Ecru · Size S',
-  'Raw Indigo · 32x30',
-  'Ivory · Size M',
-  'Espresso · EU 39',
-];
 
 export default function App() {
   const [activeRoute, setActiveRoute] = useState<ApparelRoute>('dashboard');
@@ -128,7 +137,7 @@ export default function App() {
     }
   });
 
-  // Core Clothing Business Database Entities
+  // Core Business Database Entities
   const [accounts, setAccounts] = useState<UserAccount[]>(() =>
     loadState('accounts', INITIAL_ACCOUNTS)
   );
@@ -170,42 +179,25 @@ export default function App() {
     loadState('settings', INITIAL_SETTINGS)
   );
 
-  // Realtime Feed & Drawers/Modals
-  const [realtimeEnabled, setRealtimeEnabled] = useState(true);
+  // Drawers & Modals
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [createAccountOpen, setCreateAccountOpen] = useState(false);
   const [printPreview, setPrintPreview] = useState<{
     order: ApparelOrder;
     docType: 'packing_slip' | 'invoice';
   } | null>(null);
 
-  const [notifications, setNotifications] = useState<LiveNotification[]>([
-    {
-      id: 'notif-1',
-      orderId: 'ord-5091',
-      orderNumber: 'ORD-8491',
-      title: 'New Delivery Order ORD-8491',
-      subtitle: 'Aarav Mehta · ₹22,288 · Paid via UPI',
-      timestamp: INITIAL_ORDERS[0].createdAt,
-      read: false,
-    },
-    {
-      id: 'notif-2',
-      orderId: 'ord-5090',
-      orderNumber: 'ORD-8490',
-      title: 'Pending UPI Verification ORD-8490',
-      subtitle: 'Diya Nair · ₹12,544 · Awaiting gateway webhook',
-      timestamp: INITIAL_ORDERS[1].createdAt,
-      read: false,
-    },
-  ]);
+  const [notifications, setNotifications] = useState<LiveNotification[]>([]);
 
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const notify = useCallback((message: string) => {
     setToast({ id: String(Date.now()), message });
   }, []);
+
+  const operatorName = settings.adminName?.trim() || settings.brandName || 'Admin';
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
@@ -238,175 +230,6 @@ export default function App() {
     return () => window.clearTimeout(t);
   }, [toast]);
 
-  // Simulate incoming real-time apparel order + linked transaction + payment event + account spend update
-  const handleSimulateIncomingOrder = useCallback(() => {
-    const nowIso = new Date().toISOString();
-    const nextSeq = 8492 + orders.length;
-    const orderId = `ord-${Date.now()}`;
-    const orderNumber = `ORD-${nextSeq}`;
-
-    const eligibleAccounts = accounts.filter((a) => a.status === 'Active' && a.segment !== 'Staff');
-    const buyer =
-      eligibleAccounts[Math.floor(Math.random() * eligibleAccounts.length)] ?? accounts[0];
-    const availableProds = products.filter((p) => p.isAvailable);
-    const pick1 = availableProds[Math.floor(Math.random() * availableProds.length)] ?? products[0];
-    const pick2 = availableProds[Math.floor(Math.random() * availableProds.length)] ?? products[1];
-    const var1 = GARMENT_VARIANTS[Math.floor(Math.random() * GARMENT_VARIANTS.length)];
-    const var2 = GARMENT_VARIANTS[Math.floor(Math.random() * GARMENT_VARIANTS.length)];
-
-    const items =
-      pick1.id === pick2.id
-        ? [
-            {
-              id: `oi-${Date.now()}`,
-              productId: pick1.id,
-              sku: pick1.sku,
-              name: pick1.name,
-              variant: var1,
-              quantity: 1,
-              unitPrice: pick1.price,
-            },
-          ]
-        : [
-            {
-              id: `oi-${Date.now()}-1`,
-              productId: pick1.id,
-              sku: pick1.sku,
-              name: pick1.name,
-              variant: var1,
-              quantity: 1,
-              unitPrice: pick1.price,
-            },
-            {
-              id: `oi-${Date.now()}-2`,
-              productId: pick2.id,
-              sku: pick2.sku,
-              name: pick2.name,
-              variant: var2,
-              quantity: 1,
-              unitPrice: pick2.price,
-            },
-          ];
-
-    const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
-    const tax = Math.round(subtotal * (settings.gstRatePct / 100));
-    const orderType = Math.random() > 0.4 ? 'Delivery' : 'Store Pickup';
-    const shippingFee = orderType === 'Delivery' && subtotal < 5000 ? 150 : 0;
-    const totalAmount = subtotal + tax + shippingFee;
-
-    const methodPool: PaymentMethodType[] = ['UPI', 'Card', 'Cash'];
-    const paymentMethod = methodPool[Math.floor(Math.random() * methodPool.length)];
-    const isOnlinePaid = paymentMethod !== 'Cash' && Math.random() > 0.2;
-
-    const newOrder: ApparelOrder = {
-      id: orderId,
-      orderNumber,
-      accountId: buyer.id,
-      customerName: buyer.fullName,
-      customerPhone: buyer.phone,
-      customerEmail: buyer.email,
-      deliveryAddress:
-        orderType === 'Delivery' ? `14 Residency Rd, ${buyer.city}, ${buyer.country}` : undefined,
-      orderType,
-      items,
-      subtotal,
-      tax,
-      shippingFee,
-      totalAmount,
-      paymentStatus: isOnlinePaid ? 'Paid' : 'Unpaid',
-      paymentMethod,
-      orderStatus: 'new_order',
-      staffNotes: '',
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
-
-    const txId = `TXN-${90522 + transactions.length}`;
-    const newTx: Transaction = {
-      id: txId,
-      orderId,
-      orderNumber,
-      accountId: buyer.id,
-      customerName: buyer.fullName,
-      paymentMethod,
-      amount: totalAmount,
-      refundedAmount: 0,
-      currency: 'INR',
-      status: isOnlinePaid ? 'success' : 'pending',
-      gatewayReference:
-        paymentMethod === 'Cash'
-          ? `COD-${nextSeq}`
-          : `pay_Rzp${Math.floor(100000 + Math.random() * 899999)}`,
-      gatewayProvider: paymentMethod === 'Cash' ? 'Cash Drawer' : 'Razorpay',
-      verifiedByWebhook: isOnlinePaid,
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
-
-    const newEvent: PaymentEvent = {
-      id: `EVT-${Date.now()}`,
-      transactionId: txId,
-      orderId,
-      eventType: isOnlinePaid ? 'webhook.verified' : 'payment.authorized',
-      gateway: newTx.gatewayProvider,
-      payloadSummary: isOnlinePaid
-        ? `Webhook verified ${paymentMethod} payment (${formatInr(totalAmount)})`
-        : `${paymentMethod} payment awaiting verification/collection (${formatInr(totalAmount)})`,
-      verified: isOnlinePaid,
-      timestamp: nowIso,
-    };
-
-    const historyEntry: OrderStatusHistoryItem = {
-      id: `OSH-${Date.now()}`,
-      orderId,
-      previousStatus: 'none',
-      newStatus: 'new_order',
-      changedBy: 'Online Storefront',
-      note: `Incoming ${orderType} apparel order received`,
-      timestamp: nowIso,
-    };
-
-    setOrders((prev) => [newOrder, ...prev]);
-    setTransactions((prev) => [newTx, ...prev]);
-    setPaymentEvents((prev) => [newEvent, ...prev]);
-    setStatusHistory((prev) => [historyEntry, ...prev]);
-    setAccounts((prev) =>
-      prev.map((a) =>
-        a.id === buyer.id
-          ? {
-              ...a,
-              totalOrders: a.totalOrders + 1,
-              lifetimeSpend: isOnlinePaid ? a.lifetimeSpend + totalAmount : a.lifetimeSpend,
-              lastActive: getNowTimestamp(),
-            }
-          : a
-      )
-    );
-    setNotifications((prev) => [
-      {
-        id: `notif-${Date.now()}`,
-        orderId,
-        orderNumber,
-        title: `New ${orderType} Order ${orderNumber}`,
-        subtitle: `${buyer.fullName} · ${formatInr(totalAmount)} · ${
-          isOnlinePaid ? `Paid (${paymentMethod})` : `Pending (${paymentMethod})`
-        }`,
-        timestamp: nowIso,
-        read: false,
-      },
-      ...prev,
-    ]);
-    notify(`Incoming order ${orderNumber} from ${buyer.fullName} (${formatInr(totalAmount)})`);
-  }, [orders.length, transactions.length, accounts, products, settings.gstRatePct, notify]);
-
-  useEffect(() => {
-    if (!realtimeEnabled) return;
-    const interval = window.setInterval(() => {
-      handleSimulateIncomingOrder();
-    }, 60_000);
-    return () => window.clearInterval(interval);
-  }, [realtimeEnabled, handleSimulateIncomingOrder]);
-
   const handleUpdateOrderStatus = (
     order: ApparelOrder,
     nextStatus: OrderStatus,
@@ -431,7 +254,7 @@ export default function App() {
         orderId: order.id,
         previousStatus: order.orderStatus,
         newStatus: nextStatus,
-        changedBy: 'Claire Vance',
+        changedBy: operatorName,
         note: note ?? `Moved to ${ORDER_STATUS_LABELS[nextStatus]}`,
         timestamp: nowIso,
       },
@@ -441,7 +264,7 @@ export default function App() {
       {
         id: `LOG-${Date.now()}`,
         orderId: order.id,
-        actor: 'Claire Vance',
+        actor: operatorName,
         action: 'Status Updated',
         details: `${order.orderNumber} updated from ${ORDER_STATUS_LABELS[order.orderStatus]} to ${ORDER_STATUS_LABELS[nextStatus]}`,
         timestamp: nowIso,
@@ -472,7 +295,7 @@ export default function App() {
         orderId: order.id,
         previousStatus: order.orderStatus,
         newStatus: terminal,
-        changedBy: 'Claire Vance',
+        changedBy: operatorName,
         note: reason,
         timestamp: nowIso,
       },
@@ -482,7 +305,7 @@ export default function App() {
       {
         id: `LOG-${Date.now()}`,
         orderId: order.id,
-        actor: 'Claire Vance',
+        actor: operatorName,
         action: isReject ? 'Order Rejected' : 'Order Cancelled',
         details: `${order.orderNumber}: ${reason}`,
         timestamp: nowIso,
@@ -501,7 +324,7 @@ export default function App() {
       {
         id: `LOG-${Date.now()}`,
         orderId,
-        actor: 'Claire Vance',
+        actor: operatorName,
         action: 'Staff Note Saved',
         details: notes || 'Cleared staff note',
         timestamp: nowIso,
@@ -555,9 +378,9 @@ export default function App() {
           orderId: tx.orderId,
           orderNumber: tx.orderNumber,
           transactionId: tx.id,
-          collectedBy: 'Claire Vance',
+          collectedBy: operatorName,
           amount: tx.amount,
-          registerShift: 'Flagship Active Shift',
+          registerShift: 'Active Register',
           collectedAt: nowIso,
         },
         ...prev,
@@ -577,7 +400,7 @@ export default function App() {
     const isFull = newRefundTotal >= tx.amount;
 
     const refundRecord: RefundRecord = {
-      id: `RFD-${305 + refunds.length}`,
+      id: `RFD-${Date.now().toString().slice(-4)}`,
       transactionId: tx.id,
       orderId: tx.orderId,
       orderNumber: tx.orderNumber,
@@ -585,7 +408,7 @@ export default function App() {
       amount,
       reason,
       status: 'processed',
-      processedBy: 'Claire Vance (Admin)',
+      processedBy: operatorName,
       createdAt: nowIso,
     };
 
@@ -630,7 +453,7 @@ export default function App() {
       {
         id: `LOG-${Date.now()}`,
         orderId: tx.orderId,
-        actor: 'Claire Vance',
+        actor: operatorName,
         action: 'Refund Processed',
         details: `${formatInr(amount)} refunded on ${tx.id} (${reason})`,
         timestamp: nowIso,
@@ -670,6 +493,50 @@ export default function App() {
     notify(`Created ${newAccount.segment.toLowerCase()} account for ${newAccount.fullName}`);
   };
 
+  const handleSaveWebsiteProduct = (product: ApparelProduct) => {
+    setProducts((prev) => {
+      const exists = prev.some((p) => p.id === product.id);
+      if (exists) {
+        return prev.map((p) => (p.id === product.id ? product : p));
+      }
+      return [product, ...prev];
+    });
+  };
+
+  const handleDeleteProduct = (id: string) => {
+    const target = products.find((p) => p.id === id);
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    if (editingProductId === id) {
+      setEditingProductId(null);
+    }
+    if (target) {
+      notify(`Removed ${target.name} (${target.sku}) from catalog`);
+    }
+  };
+
+  const handleClearAllData = () => {
+    setAccounts(INITIAL_ACCOUNTS);
+    setOrders(INITIAL_ORDERS);
+    setTransactions(INITIAL_TRANSACTIONS);
+    setRefunds(INITIAL_REFUNDS);
+    setPaymentEvents(INITIAL_PAYMENT_EVENTS);
+    setStatusHistory(INITIAL_STATUS_HISTORY);
+    setActivityLogs(INITIAL_ACTIVITY_LOGS);
+    setCashCollections(INITIAL_CASH_COLLECTIONS);
+    setPaymentMethods(INITIAL_PAYMENT_METHODS);
+    setProducts(INITIAL_PRODUCTS);
+    setCategories(INITIAL_CATEGORIES);
+    setDeliveryZones(INITIAL_DELIVERY_ZONES);
+    setStaff(INITIAL_STAFF);
+    setSettings(INITIAL_SETTINGS);
+    setNotifications([]);
+    setSelectedOrderId(null);
+    setSelectedTxId(null);
+    setSelectedAccountId(null);
+    setEditingProductId(null);
+    notify('Cleared all locally stored admin data');
+  };
+
   // Sidebar live badges
   const liveOrderCount = useMemo(
     () => orders.filter((o) => isOngoingOrder(o.orderStatus)).length,
@@ -700,25 +567,40 @@ export default function App() {
         pendingTxCount={pendingTxCount}
         lowStockCount={lowStockCount}
         accountCount={accounts.length}
-        realtimeConnected={realtimeEnabled}
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
         brandName={settings.brandName}
+        adminName={settings.adminName}
+        adminEmail={settings.email}
       />
 
       <div className="flex-1 min-w-0 flex flex-col">
         <ApparelTopBar
           activeRoute={activeRoute}
+          brandName={settings.brandName}
           isDark={isDark}
           onToggleTheme={() => setIsDark((p) => !p)}
           themePreset={themePreset}
           onChangeThemePreset={(next) => {
             setThemePreset(next);
-            notify(`Switched theme to ${next === 'indigo' ? 'Midnight Indigo' : next === 'pine' ? 'Pine Atelier' : next === 'burgundy' ? 'Oxblood Couture' : 'Classic Slate'}`);
+            notify(
+              `Switched theme to ${
+                next === 'indigo'
+                  ? 'Midnight Indigo'
+                  : next === 'pine'
+                    ? 'Pine Atelier'
+                    : next === 'burgundy'
+                      ? 'Oxblood Couture'
+                      : 'Classic Slate'
+              }`
+            );
           }}
           onOpenMobileMenu={() => setMobileOpen(true)}
-          onSimulateIncomingOrder={handleSimulateIncomingOrder}
           onOpenNewAccount={() => setCreateAccountOpen(true)}
+          onOpenWebsiteUpload={() => {
+            setEditingProductId(null);
+            setActiveRoute('website_upload');
+          }}
           notifications={notifications}
           onMarkAllRead={() =>
             setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
@@ -747,9 +629,6 @@ export default function App() {
           {activeRoute === 'live_orders' && (
             <ApparelLiveOrdersView
               orders={orders}
-              realtimeEnabled={realtimeEnabled}
-              onToggleRealtime={() => setRealtimeEnabled((p) => !p)}
-              onSimulateOrder={handleSimulateIncomingOrder}
               onAdvanceOrderStatus={(o, next) => handleUpdateOrderStatus(o, next)}
               onSelectOrder={(o) => setSelectedOrderId(o.id)}
             />
@@ -823,15 +702,33 @@ export default function App() {
               onToggleAvailability={(id) => {
                 setProducts((prev) =>
                   prev.map((p) =>
-                    p.id === id ? { ...p, isAvailable: !p.isAvailable } : p
+                    p.id === id
+                      ? { ...p, isAvailable: !p.isAvailable, publishedToWebsite: !p.isAvailable }
+                      : p
                   )
                 );
-                notify('Updated garment catalog availability');
+                notify('Updated product catalog availability');
               }}
               onAddProduct={(prod) => {
                 setProducts((prev) => [prod, ...prev]);
                 notify(`Added ${prod.name} (${prod.sku}) to catalog`);
               }}
+              onOpenWebsiteUpload={(productId) => {
+                setEditingProductId(productId ?? null);
+                setActiveRoute('website_upload');
+              }}
+            />
+          )}
+
+          {activeRoute === 'website_upload' && (
+            <ApparelWebsiteUploadView
+              products={products}
+              categories={categories}
+              editingProductId={editingProductId}
+              onSelectEditProduct={setEditingProductId}
+              onSaveProduct={handleSaveWebsiteProduct}
+              onDeleteProduct={handleDeleteProduct}
+              onNotify={notify}
             />
           )}
 
@@ -843,7 +740,11 @@ export default function App() {
                 setCategories((prev) =>
                   prev.map((c) => (c.id === id ? { ...c, enabled: !c.enabled } : c))
                 );
-                notify('Updated apparel category visibility');
+                notify('Updated category visibility');
+              }}
+              onAddCategory={(cat) => {
+                setCategories((prev) => [...prev, cat]);
+                notify(`Added category ${cat.name}`);
               }}
             />
           )}
@@ -859,7 +760,7 @@ export default function App() {
                       : p
                   )
                 );
-                notify('Warehouse garment stock adjusted');
+                notify('Warehouse stock adjusted');
               }}
             />
           )}
@@ -872,6 +773,10 @@ export default function App() {
                   prev.map((z) => (z.id === id ? { ...z, active: !z.active } : z))
                 );
                 notify('Updated shipping zone status');
+              }}
+              onAddZone={(zone) => {
+                setDeliveryZones((prev) => [...prev, zone]);
+                notify(`Added shipping zone ${zone.name}`);
               }}
             />
           )}
@@ -889,6 +794,10 @@ export default function App() {
                 );
                 notify('Updated staff access status');
               }}
+              onAddStaff={(member) => {
+                setStaff((prev) => [...prev, member]);
+                notify(`Added staff member ${member.name}`);
+              }}
             />
           )}
 
@@ -899,13 +808,24 @@ export default function App() {
               isDark={isDark}
               onChangeThemePreset={(next) => {
                 setThemePreset(next);
-                notify(`Switched theme to ${next === 'indigo' ? 'Midnight Indigo' : next === 'pine' ? 'Pine Atelier' : next === 'burgundy' ? 'Oxblood Couture' : 'Classic Slate'}`);
+                notify(
+                  `Switched theme to ${
+                    next === 'indigo'
+                      ? 'Midnight Indigo'
+                      : next === 'pine'
+                        ? 'Pine Atelier'
+                        : next === 'burgundy'
+                          ? 'Oxblood Couture'
+                          : 'Classic Slate'
+                  }`
+                );
               }}
               onToggleDark={() => setIsDark((p) => !p)}
               onSaveSettings={(next) => {
                 setSettings(next);
-                notify('Saved Kova Studio apparel settings');
+                notify('Saved business settings');
               }}
+              onClearAllData={handleClearAllData}
             />
           )}
         </main>
@@ -916,6 +836,7 @@ export default function App() {
         transactions={transactions}
         statusHistory={statusHistory}
         activityLogs={activityLogs}
+        brandName={settings.brandName}
         onClose={() => setSelectedOrderId(null)}
         onUpdateStatus={handleUpdateOrderStatus}
         onCancelOrder={handleCancelOrder}
@@ -929,6 +850,7 @@ export default function App() {
         order={selectedTxOrder}
         paymentEvents={paymentEvents}
         refunds={refunds}
+        brandName={settings.brandName}
         onClose={() => setSelectedTxId(null)}
         onOpenOrder={(order) => setSelectedOrderId(order.id)}
         onPrintInvoice={(order) => setPrintPreview({ order, docType: 'invoice' })}

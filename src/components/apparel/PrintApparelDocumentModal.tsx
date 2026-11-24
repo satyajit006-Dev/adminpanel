@@ -58,9 +58,15 @@ export function PrintApparelDocumentModal({
 
         <div id="printable-document" className="p-6 font-mono text-xs space-y-4 bg-white text-black">
           <div className="text-center border-b border-dashed border-neutral-300 pb-3">
-            <p className="text-sm font-bold uppercase tracking-wider">{settings.brandName}</p>
-            {!isPackingSlip && <p className="text-[11px] text-neutral-600 mt-0.5">{settings.address}</p>}
-            {!isPackingSlip && <p className="text-[11px] text-neutral-600">Tel: {settings.phone}</p>}
+            <p className="text-sm font-bold uppercase tracking-wider">
+              {settings.brandName || 'Apparel Store'}
+            </p>
+            {!isPackingSlip && settings.address && (
+              <p className="text-[11px] text-neutral-600 mt-0.5">{settings.address}</p>
+            )}
+            {!isPackingSlip && settings.phone && (
+              <p className="text-[11px] text-neutral-600">Tel: {settings.phone}</p>
+            )}
             <p className="mt-2 font-bold">
               {isPackingSlip ? '*** WAREHOUSE PACKING SLIP ***' : 'RETAIL TAX INVOICE'}
             </p>
@@ -136,8 +142,8 @@ export function PrintApparelDocumentModal({
 
           <p className="text-center text-[10px] text-neutral-500 pt-2">
             {isPackingSlip
-              ? 'Verify garment tags & size labels prior to seal · Kova Studio'
-              : 'Thank you for shopping with Kova Studio'}
+              ? `Verify garment tags & size labels prior to seal · ${settings.brandName || 'Apparel Store'}`
+              : `Thank you for shopping with ${settings.brandName || 'us'}`}
           </p>
         </div>
       </div>

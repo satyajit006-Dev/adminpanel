@@ -126,13 +126,13 @@ export function ApparelAccountsView({
   };
 
   const handleExportFiltered = () => {
-    exportAccountsCsv(filteredAccounts, 'kova-studio-filtered-accounts.csv');
+    exportAccountsCsv(filteredAccounts, 'store-filtered-accounts.csv');
     onNotify(`Exported ${filteredAccounts.length} accounts to CSV`);
   };
 
   const handleExportSelected = () => {
     const selected = accounts.filter((a) => selectedIds.includes(a.id));
-    exportAccountsCsv(selected, 'kova-studio-selected-accounts.csv');
+    exportAccountsCsv(selected, 'store-selected-accounts.csv');
     onNotify(`Exported ${selected.length} selected accounts to CSV`);
   };
 
@@ -309,18 +309,31 @@ export function ApparelAccountsView({
         {filteredAccounts.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
             <p className="font-display text-base font-semibold text-ink">
-              No matching accounts found
+              {accounts.length === 0 ? 'No user accounts yet' : 'No matching accounts found'}
             </p>
             <p className="mt-1 max-w-md text-sm text-ink-muted">
-              No customer, wholesale, or staff accounts match your current search or filter criteria.
+              {accounts.length === 0
+                ? 'Create customer, wholesale buyer, or staff accounts to manage orders and access.'
+                : 'No customer, wholesale, or staff accounts match your current search or filter criteria.'}
             </p>
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="mt-4 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
-            >
-              Reset Filters
-            </button>
+            {accounts.length === 0 ? (
+              <button
+                type="button"
+                onClick={onOpenNewAccount}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
+              >
+                <UserPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Create First Account</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-4 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -1115,7 +1128,7 @@ export function ApparelCreateAccountModal({
   const [status, setStatus] = useState<AccountStatus>('Active');
   const [companyName, setCompanyName] = useState('');
   const [city, setCity] = useState('');
-  const [country, setCountry] = useState('India');
+  const [country, setCountry] = useState('');
   const [tops, setTops] = useState('M');
   const [bottoms, setBottoms] = useState('32');
   const [footwear, setFootwear] = useState('EU 41');
@@ -1134,20 +1147,20 @@ export function ApparelCreateAccountModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const randomNum = Math.floor(1300 + Math.random() * 8600);
+    const randomNum = Math.floor(1000 + Math.random() * 8999);
     const today = new Date().toISOString().slice(0, 10);
 
     const newAccount: UserAccount = {
-      id: segment === 'Staff' ? `KV-0${Math.floor(100 + Math.random() * 899)}` : `KV-${randomNum}`,
+      id: segment === 'Staff' ? `STF-${randomNum}` : `USR-${randomNum}`,
       fullName: fullName.trim(),
       email: email.trim(),
-      phone: phone.trim() || '+91 98200 00000',
+      phone: phone.trim() || '—',
       segment,
       role,
       tier,
       status,
-      city: city.trim() || 'Bengaluru',
-      country: country.trim() || 'India',
+      city: city.trim() || '—',
+      country: country.trim() || '—',
       companyName: companyName.trim() || undefined,
       totalOrders: 0,
       lifetimeSpend: 0,
@@ -1169,6 +1182,7 @@ export function ApparelCreateAccountModal({
     setPhone('');
     setCompanyName('');
     setCity('');
+    setCountry('');
     setNotes('');
     onClose();
   };
@@ -1219,7 +1233,7 @@ export function ApparelCreateAccountModal({
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Rohan Kulkarni"
+                placeholder="Customer or staff full name"
                 className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
@@ -1232,7 +1246,7 @@ export function ApparelCreateAccountModal({
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="rohan@domain.in"
+                placeholder="name@example.com"
                 className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
@@ -1304,7 +1318,7 @@ export function ApparelCreateAccountModal({
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98200 11223"
+                placeholder="+91 00000 00000"
                 className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
@@ -1316,7 +1330,7 @@ export function ApparelCreateAccountModal({
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                placeholder="e.g. Studio Select Mumbai"
+                placeholder="Company or store name"
                 className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
@@ -1328,7 +1342,7 @@ export function ApparelCreateAccountModal({
                 type="text"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder="Bengaluru"
+                placeholder="City"
                 className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
@@ -1340,7 +1354,8 @@ export function ApparelCreateAccountModal({
                 type="text"
                 value={country}
                 onChange={(e) => setCountry(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:outline-none"
+                placeholder="Country"
+                className="mt-1 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
               />
             </div>
           </div>

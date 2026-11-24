@@ -47,68 +47,79 @@ export function ApparelRefundsView({
             Ledger Traceability
           </p>
           <p className="mt-1.5 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-            100% Linked to Original Txn &amp; Order
+            Linked to Original Txn &amp; Order
           </p>
         </div>
       </div>
 
       <section className="rounded-xl border border-line bg-surface overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr className="border-b border-line bg-subtle text-xs font-medium text-ink-muted">
-                <th className="py-3 pl-5 pr-3">Refund ID</th>
-                <th className="py-3 px-3">Transaction</th>
-                <th className="py-3 px-3">Order</th>
-                <th className="py-3 px-3">Customer</th>
-                <th className="py-3 px-3">Reason</th>
-                <th className="py-3 px-3 text-right">Amount</th>
-                <th className="py-3 px-3">Processed By</th>
-                <th className="py-3 pl-3 pr-5 text-right">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-subtle text-xs">
-              {refunds.map((r) => (
-                <tr key={r.id} className="hover:bg-hover transition-colors">
-                  <td className="py-3 pl-5 pr-3 font-mono font-bold text-ink">
-                    {r.id}
-                  </td>
-                  <td className="py-3 px-3">
-                    <button
-                      type="button"
-                      onClick={() => onOpenTransactionById(r.transactionId)}
-                      className="font-mono font-semibold text-accent-text hover:underline"
-                    >
-                      {r.transactionId}
-                    </button>
-                  </td>
-                  <td className="py-3 px-3">
-                    <button
-                      type="button"
-                      onClick={() => onOpenOrderById(r.orderId)}
-                      className="font-mono font-semibold text-accent-text hover:underline"
-                    >
-                      {r.orderNumber}
-                    </button>
-                  </td>
-                  <td className="py-3 px-3 font-medium text-ink">
-                    {r.customerName}
-                  </td>
-                  <td className="py-3 px-3 text-ink-secondary max-w-xs">
-                    {r.reason}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono font-semibold text-red-700 dark:text-red-400 tabular-nums">
-                    -{formatInr(r.amount)}
-                  </td>
-                  <td className="py-3 px-3 text-ink-muted">{r.processedBy}</td>
-                  <td className="py-3 pl-3 pr-5 text-right font-mono text-ink-muted whitespace-nowrap">
-                    {formatDateTime(r.createdAt)}
-                  </td>
+        {refunds.length === 0 ? (
+          <div className="px-6 py-14 text-center">
+            <p className="font-display text-base font-semibold text-ink">
+              No refunds processed
+            </p>
+            <p className="mt-1 text-xs text-ink-muted">
+              Full or partial refunds issued from a transaction will be logged here.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="border-b border-line bg-subtle text-xs font-medium text-ink-muted">
+                  <th className="py-3 pl-5 pr-3">Refund ID</th>
+                  <th className="py-3 px-3">Transaction</th>
+                  <th className="py-3 px-3">Order</th>
+                  <th className="py-3 px-3">Customer</th>
+                  <th className="py-3 px-3">Reason</th>
+                  <th className="py-3 px-3 text-right">Amount</th>
+                  <th className="py-3 px-3">Processed By</th>
+                  <th className="py-3 pl-3 pr-5 text-right">Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-line-subtle text-xs">
+                {refunds.map((r) => (
+                  <tr key={r.id} className="hover:bg-hover transition-colors">
+                    <td className="py-3 pl-5 pr-3 font-mono font-bold text-ink">
+                      {r.id}
+                    </td>
+                    <td className="py-3 px-3">
+                      <button
+                        type="button"
+                        onClick={() => onOpenTransactionById(r.transactionId)}
+                        className="font-mono font-semibold text-accent-text hover:underline"
+                      >
+                        {r.transactionId}
+                      </button>
+                    </td>
+                    <td className="py-3 px-3">
+                      <button
+                        type="button"
+                        onClick={() => onOpenOrderById(r.orderId)}
+                        className="font-mono font-semibold text-accent-text hover:underline"
+                      >
+                        {r.orderNumber}
+                      </button>
+                    </td>
+                    <td className="py-3 px-3 font-medium text-ink">
+                      {r.customerName}
+                    </td>
+                    <td className="py-3 px-3 text-ink-secondary max-w-xs">
+                      {r.reason}
+                    </td>
+                    <td className="py-3 px-3 text-right font-mono font-semibold text-red-700 dark:text-red-400 tabular-nums">
+                      -{formatInr(r.amount)}
+                    </td>
+                    <td className="py-3 px-3 text-ink-muted">{r.processedBy}</td>
+                    <td className="py-3 pl-3 pr-5 text-right font-mono text-ink-muted whitespace-nowrap">
+                      {formatDateTime(r.createdAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -149,26 +160,32 @@ export function ApparelFinancialReportsView({
       {/* Payment Method Breakdown */}
       <section className="rounded-xl border border-line bg-surface p-6">
         <h2 className="font-display text-base font-semibold text-ink">
-          Settled Apparel Collection by Payment Method
+          Settled Collection by Payment Method
         </h2>
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {breakdown.map((row) => (
-            <div
-              key={row.method}
-              className="rounded-lg border border-line p-4"
-            >
-              <p className="text-xs font-semibold text-ink">
-                {row.method}
-              </p>
-              <p className="mt-1 font-mono text-xl font-bold text-ink tabular-nums">
-                {formatInr(row.net)}
-              </p>
-              <p className="mt-1 text-[11px] text-ink-muted font-mono">
-                {row.count} txns · Gross {formatInr(row.gross)} · Refunds {formatInr(row.refunded)}
-              </p>
-            </div>
-          ))}
-        </div>
+        {breakdown.length === 0 ? (
+          <p className="mt-3 text-xs text-ink-muted">
+            No settled transactions yet. Collection totals by UPI, Card, Cash, and Net Banking will appear here as orders are paid.
+          </p>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {breakdown.map((row) => (
+              <div
+                key={row.method}
+                className="rounded-lg border border-line p-4"
+              >
+                <p className="text-xs font-semibold text-ink">
+                  {row.method}
+                </p>
+                <p className="mt-1 font-mono text-xl font-bold text-ink tabular-nums">
+                  {formatInr(row.net)}
+                </p>
+                <p className="mt-1 text-[11px] text-ink-muted font-mono">
+                  {row.count} txns · Gross {formatInr(row.gross)} · Refunds {formatInr(row.refunded)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -176,31 +193,40 @@ export function ApparelFinancialReportsView({
         <section className="rounded-xl border border-line bg-surface overflow-hidden">
           <div className="border-b border-line-subtle px-5 py-3.5">
             <h2 className="font-display text-sm font-semibold text-ink">
-              Cash Collections Ledger (Flagship POS &amp; COD)
+              Cash Collections Ledger (POS &amp; COD)
             </h2>
           </div>
-          <div className="divide-y divide-line-subtle">
-            {cashCollections.map((c) => (
-              <div key={c.id} className="flex items-center justify-between gap-3 px-5 py-3 text-xs">
-                <div>
-                  <p className="font-mono font-semibold text-ink">
-                    {c.orderNumber} · {c.transactionId}
-                  </p>
-                  <p className="text-ink-muted">
-                    {c.registerShift} · Collected by {c.collectedBy}
-                  </p>
+          {cashCollections.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <p className="text-xs font-medium text-ink">No cash collections recorded</p>
+              <p className="mt-1 text-xs text-ink-muted">
+                Verified cash-on-delivery and counter settlements appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-line-subtle">
+              {cashCollections.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-3 px-5 py-3 text-xs">
+                  <div>
+                    <p className="font-mono font-semibold text-ink">
+                      {c.orderNumber} · {c.transactionId}
+                    </p>
+                    <p className="text-ink-muted">
+                      {c.registerShift} · Collected by {c.collectedBy}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
+                      {formatInr(c.amount)}
+                    </p>
+                    <p className="font-mono text-[10px] text-ink-muted">
+                      {formatDateTime(c.collectedAt)}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-mono font-bold text-emerald-700 dark:text-emerald-400 tabular-nums">
-                    {formatInr(c.amount)}
-                  </p>
-                  <p className="font-mono text-[10px] text-ink-muted">
-                    {formatDateTime(c.collectedAt)}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Supported Payment Methods */}

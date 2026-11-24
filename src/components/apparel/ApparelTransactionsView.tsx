@@ -149,7 +149,7 @@ export function ApparelTransactionsView({
     {
       label: 'Cash Collected',
       value: formatInr(summary.cashCollected),
-      sub: 'Flagship POS & COD drawer',
+      sub: 'Cash & COD drawer',
       onClick: () => setMethodFilter('Cash'),
     },
     {
@@ -308,15 +308,24 @@ export function ApparelTransactionsView({
         {filtered.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <p className="font-display text-base font-semibold text-ink">
-              No transactions match your filters
+              {transactions.length === 0
+                ? 'No transactions recorded yet'
+                : 'No transactions match your filters'}
             </p>
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="mt-3 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover"
-            >
-              Reset Filters
-            </button>
+            <p className="mt-1 text-xs text-ink-muted">
+              {transactions.length === 0
+                ? 'Gateway payments, UPI settlements, and COD receipts will appear here.'
+                : 'Try adjusting your status, payment method, or date filters.'}
+            </p>
+            {transactions.length > 0 && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="mt-3 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">

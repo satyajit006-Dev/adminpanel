@@ -106,7 +106,7 @@ export function isSameLocalDay(iso: string, referenceDate = new Date()): boolean
 
 export function exportTransactionsCsv(
   transactions: Transaction[],
-  filename = 'kova-studio-transactions.csv'
+  filename = 'store-transactions.csv'
 ): void {
   const headers = [
     'Transaction ID',
@@ -157,7 +157,7 @@ export function exportTransactionsCsv(
 
 export function exportOrdersCsv(
   orders: ApparelOrder[],
-  filename = 'kova-studio-orders.csv'
+  filename = 'store-orders.csv'
 ): void {
   const headers = [
     'Order Number',
@@ -206,7 +206,7 @@ export function exportOrdersCsv(
 
 export function exportAccountsCsv(
   accounts: UserAccount[],
-  filename = 'kova-studio-accounts.csv'
+  filename = 'store-accounts.csv'
 ): void {
   const headers = [
     'Account ID',

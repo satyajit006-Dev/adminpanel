@@ -84,8 +84,8 @@ export function ApparelAllOrdersView({
   ];
 
   const handleExport = () => {
-    exportOrdersCsv(filtered, `kova-studio-${tab}-orders.csv`);
-    onNotify(`Exported ${filtered.length} apparel orders to CSV`);
+    exportOrdersCsv(filtered, `store-${tab}-orders.csv`);
+    onNotify(`Exported ${filtered.length} orders to CSV`);
   };
 
   return (
@@ -179,10 +179,12 @@ export function ApparelAllOrdersView({
         {filtered.length === 0 ? (
           <div className="px-6 py-14 text-center">
             <p className="font-display text-base font-semibold text-ink">
-              No orders found
+              {orders.length === 0 ? 'No orders recorded yet' : 'No matching orders found'}
             </p>
             <p className="mt-1 text-xs text-ink-muted">
-              Try clearing your search or switching to another order tab.
+              {orders.length === 0
+                ? 'Customer orders placed on your website will appear here once received.'
+                : 'Try clearing your search or switching to another order tab.'}
             </p>
           </div>
         ) : (

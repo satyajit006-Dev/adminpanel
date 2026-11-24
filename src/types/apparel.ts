@@ -8,6 +8,7 @@ export type ApparelRoute =
   | 'refunds'
   | 'financial_reports'
   | 'products'
+  | 'website_upload'
   | 'categories'
   | 'inventory'
   | 'accounts'
@@ -88,7 +89,7 @@ export interface Transaction {
   currency: string;
   status: TransactionStatus;
   gatewayReference?: string;
-  gatewayProvider: 'Razorpay' | 'Flagship POS' | 'Cash Drawer';
+  gatewayProvider: string;
   verifiedByWebhook: boolean;
   createdAt: string;
   updatedAt: string;
@@ -166,15 +167,26 @@ export interface ApparelProduct {
   id: string;
   sku: string;
   name: string;
+  slug?: string;
   categoryId: string;
   categoryName: string;
   price: number;
+  compareAtPrice?: number;
   fabric: string;
+  careInstructions?: string;
   sizesAvailable: string;
+  colors?: string[];
   stockQuantity: number;
   lowStockThreshold: number;
   isAvailable: boolean;
   isBestseller: boolean;
+  description?: string;
+  images?: string[];
+  tags?: string[];
+  publishedToWebsite?: boolean;
+  websiteSyncStatus?: 'synced' | 'local_only' | 'failed';
+  lastSyncedAt?: string;
+  syncError?: string;
 }
 
 export interface ApparelCategory {
@@ -206,6 +218,7 @@ export interface StaffMember {
 
 export interface BusinessSettings {
   brandName: string;
+  adminName?: string;
   phone: string;
   whatsapp: string;
   email: string;
