@@ -1,12 +1,12 @@
 import crypto from 'crypto';
-import { verifyAdminBearerToken } from './adminAuth';
+import { verifyAdminBearerToken } from './adminAuth.js';
 import {
   getCustomersTableName,
   getOrdersTableName,
   getStorageBucketName,
   getSupabaseAdmin,
   getTransactionsTableName,
-} from './supabaseClient';
+} from './supabaseClient.js';
 
 function num(v: unknown, fallback = 0): number {
   const n = Number(v);

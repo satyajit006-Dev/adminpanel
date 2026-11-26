@@ -167,12 +167,23 @@ create policy "Customers can view own order transactions"
     )
   );
 
--- 5. Server-only admin passcode config (RLS enabled, NO public policies)
+-- 5. Server-only admin credentials config (RLS enabled, NO public policies)
 create table if not exists public.admin_auth_config (
   id text primary key,
+  admin_role text not null default 'Owner',
+  admin_username text not null default 'admin',
   passcode_hash text not null,
   updated_at timestamptz not null default now()
 );
+
+alter table public.admin_auth_config
+  add column if not exists admin_role text not null default 'Owner';
+
+alter table public.admin_auth_config
+  add column if not exists admin_username text not null default 'admin';
+
+create unique index if not exists idx_admin_auth_username
+  on public.admin_auth_config (admin_username);
 
 alter table public.admin_auth_config enable row level security;
 

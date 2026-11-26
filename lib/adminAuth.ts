@@ -1,16 +1,54 @@
 import crypto from 'crypto';
-import { getSupabaseAdmin } from './supabaseClient';
+import { getSupabaseAdmin } from './supabaseClient.js';
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000; // 8 hours
-const FALLBACK_SIGNING_SECRET = crypto.randomBytes(32).toString('hex');
+const RANDOM_DEV_SECRET = crypto.randomBytes(32).toString('hex');
 
-// In-memory fallback hash when Supabase is not yet configured and ADMIN_PASSCODE is unset
-let inMemoryClaimedHash: string | null = null;
+export type AdminRoleKey = 'owner' | 'co_founder';
+export type AdminRoleLabel = 'Owner' | 'Co-Founder';
+
+interface StoredAdminCredential {
+  roleKey: AdminRoleKey;
+  roleLabel: AdminRoleLabel;
+  username: string;
+  passcodeHash?: string;
+  plainEnvPasscode?: string;
+  altEnvUsernames?: string[];
+  source: 'env' | 'database' | 'memory';
+}
+
+// In-memory fallback when Supabase is not yet configured and env passcodes are unset
+const inMemoryCredentials: Partial<Record<AdminRoleKey, StoredAdminCredential>> = {};
+
+function roleLabelFromKey(key: AdminRoleKey): AdminRoleLabel {
+  return key === 'co_founder' ? 'Co-Founder' : 'Owner';
+}
 
 function getSigningSecret(): string {
   const envSecret = process.env.SESSION_SECRET?.trim();
   if (envSecret && envSecret.length >= 16) return envSecret;
-  return FALLBACK_SIGNING_SECRET;
+
+  // Deterministic across separate Vercel serverless invocations when server secrets exist
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || '';
+  const ownerPass =
+    process.env.ADMIN_OWNER_PASSCODE?.trim() || process.env.ADMIN_PASSCODE?.trim() || '';
+  const cofounderPass = process.env.ADMIN_COFOUNDER_PASSCODE?.trim() || '';
+  if (serviceKey || ownerPass || cofounderPass) {
+    return crypto
+      .createHmac('sha256', 'apparel-admin-session-key-v2')
+      .update(`${serviceKey}::${ownerPass}::${cofounderPass}`)
+      .digest('hex');
+  }
+
+  return RANDOM_DEV_SECRET;
+}
+
+function normalizeUsername(raw: unknown): string {
+  return typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+}
+
+function isValidUsername(username: string): boolean {
+  return /^[a-z0-9._@-]{3,64}$/.test(username);
 }
 
 function hashPasscode(passcode: string): string {
@@ -40,87 +78,250 @@ function timingSafeCompareText(a: string, b: string): boolean {
   return crypto.timingSafeEqual(hashA, hashB);
 }
 
-async function readClaimedHash(): Promise<string | null> {
-  const supabase = getSupabaseAdmin();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('admin_auth_config')
-        .select('passcode_hash')
-        .eq('id', 'primary')
-        .maybeSingle();
-      if (!error && data && typeof data.passcode_hash === 'string') {
-        return data.passcode_hash;
-      }
-    } catch {
-      // Fallback to memory if admin_auth_config table has not been created yet
-    }
+function getEnvCredential(roleKey: AdminRoleKey): StoredAdminCredential | null {
+  if (roleKey === 'owner') {
+    const passcode =
+      process.env.ADMIN_OWNER_PASSCODE?.trim() || process.env.ADMIN_PASSCODE?.trim() || '';
+    if (!passcode) return null;
+    const explicitUser =
+      process.env.ADMIN_OWNER_USERNAME?.trim().toLowerCase() ||
+      process.env.ADMIN_USERNAME?.trim().toLowerCase() ||
+      '';
+    return {
+      roleKey: 'owner',
+      roleLabel: 'Owner',
+      username: explicitUser || 'owner',
+      altEnvUsernames: explicitUser ? [] : ['admin'],
+      plainEnvPasscode: passcode,
+      source: 'env',
+    };
   }
-  return inMemoryClaimedHash;
+
+  const passcode = process.env.ADMIN_COFOUNDER_PASSCODE?.trim() || '';
+  if (!passcode) return null;
+  const explicitUser = process.env.ADMIN_COFOUNDER_USERNAME?.trim().toLowerCase() || '';
+  return {
+    roleKey: 'co_founder',
+    roleLabel: 'Co-Founder',
+    username: explicitUser || 'cofounder',
+    altEnvUsernames: explicitUser ? [] : ['co-founder', 'co_founder'],
+    plainEnvPasscode: passcode,
+    source: 'env',
+  };
 }
 
-async function writeClaimedHashIfUnset(passcodeHash: string): Promise<{ ok: boolean; conflict?: boolean }> {
+async function readDbCredential(roleKey: AdminRoleKey): Promise<StoredAdminCredential | null> {
+  const envCred = getEnvCredential(roleKey);
+  if (envCred) return envCred;
+
   const supabase = getSupabaseAdmin();
   if (supabase) {
-    try {
-      const existing = await supabase
-        .from('admin_auth_config')
-        .select('id')
-        .eq('id', 'primary')
-        .maybeSingle();
-
-      if (!existing.error && existing.data) {
-        return { ok: false, conflict: true };
-      }
-
-      if (!existing.error) {
-        const { error: insertErr } = await supabase
+    const idsToCheck = roleKey === 'owner' ? ['owner', 'primary'] : ['co_founder'];
+    for (const id of idsToCheck) {
+      try {
+        const { data, error } = await supabase
           .from('admin_auth_config')
-          .insert({
-            id: 'primary',
-            passcode_hash: passcodeHash,
-            updated_at: new Date().toISOString(),
-          });
-        if (!insertErr) {
-          inMemoryClaimedHash = passcodeHash;
-          return { ok: true };
+          .select('id, admin_role, admin_username, passcode_hash')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (!error && data && typeof data.passcode_hash === 'string') {
+          return {
+            roleKey,
+            roleLabel: roleLabelFromKey(roleKey),
+            username:
+              typeof data.admin_username === 'string' && data.admin_username.trim()
+                ? data.admin_username.trim().toLowerCase()
+                : roleKey === 'co_founder'
+                  ? 'cofounder'
+                  : 'owner',
+            passcodeHash: data.passcode_hash,
+            source: 'database',
+          };
         }
-        if (insertErr.code === '23505') {
-          return { ok: false, conflict: true };
+
+        // Backwards compatibility if admin_role or admin_username columns don't exist yet
+        if (error && error.code === '42703') {
+          const legacy = await supabase
+            .from('admin_auth_config')
+            .select('passcode_hash')
+            .eq('id', id)
+            .maybeSingle();
+          if (!legacy.error && legacy.data && typeof legacy.data.passcode_hash === 'string') {
+            return {
+              roleKey,
+              roleLabel: roleLabelFromKey(roleKey),
+              username: roleKey === 'co_founder' ? 'cofounder' : 'admin',
+              passcodeHash: legacy.data.passcode_hash,
+              source: 'database',
+            };
+          }
         }
+      } catch {
+        // Fallback to in-memory store
       }
-    } catch {
-      // Fall through to in-memory lock if admin_auth_config table is not provisioned yet
     }
   }
 
-  if (inMemoryClaimedHash) {
-    return { ok: false, conflict: true };
+  return inMemoryCredentials[roleKey] ?? null;
+}
+
+async function upsertRoleCredential(
+  roleKey: AdminRoleKey,
+  username: string,
+  passcodeHash: string
+): Promise<{ ok: boolean; error?: string }> {
+  const roleLabel = roleLabelFromKey(roleKey);
+  const supabase = getSupabaseAdmin();
+
+  if (supabase) {
+    try {
+      let { error } = await supabase.from('admin_auth_config').upsert(
+        {
+          id: roleKey,
+          admin_role: roleLabel,
+          admin_username: username,
+          passcode_hash: passcodeHash,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' }
+      );
+
+      // Legacy table compatibility
+      if (error && error.code === '42703') {
+        const retry = await supabase.from('admin_auth_config').upsert(
+          {
+            id: roleKey,
+            admin_username: username,
+            passcode_hash: passcodeHash,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
+        error = retry.error;
+      }
+      if (error && error.code === '42703') {
+        const retryMin = await supabase.from('admin_auth_config').upsert(
+          {
+            id: roleKey,
+            passcode_hash: passcodeHash,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        );
+        error = retryMin.error;
+      }
+
+      if (error) {
+        if (error.code !== '42P01') {
+          return { ok: false, error: `Failed to save ${roleLabel} credentials: ${error.message}` };
+        }
+      } else {
+        inMemoryCredentials[roleKey] = {
+          roleKey,
+          roleLabel,
+          username,
+          passcodeHash,
+          source: 'database',
+        };
+        return { ok: true };
+      }
+    } catch {
+      // Fall through to memory if table doesn't exist yet
+    }
   }
-  inMemoryClaimedHash = passcodeHash;
+
+  inMemoryCredentials[roleKey] = {
+    roleKey,
+    roleLabel,
+    username,
+    passcodeHash,
+    source: 'memory',
+  };
   return { ok: true };
+}
+
+function matchesCredential(
+  cred: StoredAdminCredential,
+  username: string,
+  passcode: string
+): boolean {
+  const validUsernames = [cred.username, ...(cred.altEnvUsernames ?? [])];
+  const userMatched = validUsernames.some((candidate) =>
+    timingSafeCompareText(username, candidate)
+  );
+  if (!userMatched) return false;
+
+  if (cred.plainEnvPasscode) {
+    return timingSafeCompareText(passcode, cred.plainEnvPasscode);
+  }
+  if (cred.passcodeHash) {
+    return verifyPasscodeHash(passcode, cred.passcodeHash);
+  }
+  return false;
+}
+
+function matchesPasscodeOnly(cred: StoredAdminCredential, passcode: string): boolean {
+  if (cred.plainEnvPasscode) {
+    return timingSafeCompareText(passcode, cred.plainEnvPasscode);
+  }
+  if (cred.passcodeHash) {
+    return verifyPasscodeHash(passcode, cred.passcodeHash);
+  }
+  return false;
 }
 
 export async function getAuthStatus(): Promise<{
   usingEnvPasscode: boolean;
+  usingEnvUsername: boolean;
   authClaimed: boolean;
+  ownerClaimed: boolean;
+  cofounderClaimed: boolean;
+  usingEnvOwnerPasscode: boolean;
+  usingEnvCofounderPasscode: boolean;
+  usingEnvOwnerUsername: boolean;
+  usingEnvCofounderUsername: boolean;
 }> {
-  const envPasscode = process.env.ADMIN_PASSCODE?.trim();
-  if (envPasscode) {
-    return { usingEnvPasscode: true, authClaimed: true };
-  }
-  const storedHash = await readClaimedHash();
+  const [ownerCred, cofounderCred] = await Promise.all([
+    readDbCredential('owner'),
+    readDbCredential('co_founder'),
+  ]);
+
+  const usingEnvOwnerPasscode = Boolean(
+    process.env.ADMIN_OWNER_PASSCODE?.trim() || process.env.ADMIN_PASSCODE?.trim()
+  );
+  const usingEnvCofounderPasscode = Boolean(process.env.ADMIN_COFOUNDER_PASSCODE?.trim());
+  const usingEnvOwnerUsername = Boolean(
+    process.env.ADMIN_OWNER_USERNAME?.trim() || process.env.ADMIN_USERNAME?.trim()
+  );
+  const usingEnvCofounderUsername = Boolean(process.env.ADMIN_COFOUNDER_USERNAME?.trim());
+
+  const ownerClaimed = Boolean(ownerCred);
+  const cofounderClaimed = Boolean(cofounderCred);
+
   return {
-    usingEnvPasscode: false,
-    authClaimed: Boolean(storedHash),
+    usingEnvPasscode: usingEnvOwnerPasscode,
+    usingEnvUsername: usingEnvOwnerUsername,
+    authClaimed: ownerClaimed || cofounderClaimed,
+    ownerClaimed,
+    cofounderClaimed,
+    usingEnvOwnerPasscode,
+    usingEnvCofounderPasscode,
+    usingEnvOwnerUsername,
+    usingEnvCofounderUsername,
   };
 }
 
-function createSignedToken(): { token: string; expiresAt: string } {
+function createSignedToken(
+  username: string,
+  roleLabel: AdminRoleLabel
+): { token: string; expiresAt: string } {
   const now = Date.now();
   const expiresAtMs = now + SESSION_TTL_MS;
   const payload = {
     sub: 'store-admin',
+    username,
+    role: roleLabel,
     iat: Math.floor(now / 1000),
     exp: Math.floor(expiresAtMs / 1000),
     nonce: crypto.randomBytes(8).toString('hex'),
@@ -139,7 +340,9 @@ function createSignedToken(): { token: string; expiresAt: string } {
 
 export function verifyAdminBearerToken(
   authorizationHeader: string | undefined
-): { ok: true } | { ok: false; status: number; error: string } {
+):
+  | { ok: true; username?: string; role?: AdminRoleLabel }
+  | { ok: false; status: number; error: string } {
   if (!authorizationHeader || !authorizationHeader.startsWith('Bearer ')) {
     return { ok: false, status: 401, error: 'Admin authentication required' };
   }
@@ -169,6 +372,8 @@ export function verifyAdminBearerToken(
   try {
     const parsed = JSON.parse(Buffer.from(encodedPayload, 'base64url').toString('utf8')) as {
       sub?: string;
+      username?: string;
+      role?: AdminRoleLabel;
       exp?: number;
     };
     if (
@@ -178,7 +383,7 @@ export function verifyAdminBearerToken(
     ) {
       return { ok: false, status: 401, error: 'Admin session expired. Sign in again.' };
     }
-    return { ok: true };
+    return { ok: true, username: parsed.username, role: parsed.role };
   } catch {
     return { ok: false, status: 401, error: 'Admin authentication required' };
   }
@@ -187,18 +392,265 @@ export function verifyAdminBearerToken(
 export async function handleClaimAdminPasscode(
   body: Record<string, unknown> | null
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const envPasscode = process.env.ADMIN_PASSCODE?.trim();
-  if (envPasscode) {
+  const status = await getAuthStatus();
+  if (status.ownerClaimed || status.cofounderClaimed) {
     return {
       status: 409,
       payload: {
         ok: false,
-        error: 'Admin passcode is already managed via ADMIN_PASSCODE environment variable.',
+        error: 'Admin credentials have already been claimed. Use sign-in instead.',
       },
     };
   }
 
+  const ownerUsername = normalizeUsername(body?.ownerUsername ?? body?.username);
+  const ownerPasscode =
+    typeof (body?.ownerPasscode ?? body?.passcode) === 'string'
+      ? String(body?.ownerPasscode ?? body?.passcode).trim()
+      : '';
+
+  if (!isValidUsername(ownerUsername)) {
+    return {
+      status: 400,
+      payload: {
+        ok: false,
+        error:
+          'Owner username must be 3–64 characters using letters, numbers, dots, underscores, hyphens, or @.',
+      },
+    };
+  }
+  if (ownerPasscode.length < 8 || ownerPasscode.length > 128) {
+    return {
+      status: 400,
+      payload: {
+        ok: false,
+        error: 'Owner passcode must be between 8 and 128 characters.',
+      },
+    };
+  }
+
+  const cofounderUsername = normalizeUsername(body?.cofounderUsername);
+  const cofounderPasscode =
+    typeof body?.cofounderPasscode === 'string' ? body.cofounderPasscode.trim() : '';
+
+  const hasCofounderInput = Boolean(cofounderUsername || cofounderPasscode);
+  if (hasCofounderInput) {
+    if (!isValidUsername(cofounderUsername)) {
+      return {
+        status: 400,
+        payload: {
+          ok: false,
+          error:
+            'Co-Founder username must be 3–64 characters using letters, numbers, dots, underscores, hyphens, or @.',
+        },
+      };
+    }
+    if (cofounderPasscode.length < 8 || cofounderPasscode.length > 128) {
+      return {
+        status: 400,
+        payload: {
+          ok: false,
+          error: 'Co-Founder passcode must be between 8 and 128 characters.',
+        },
+      };
+    }
+    if (cofounderUsername === ownerUsername) {
+      return {
+        status: 400,
+        payload: {
+          ok: false,
+          error: 'Owner and Co-Founder must have different usernames.',
+        },
+      };
+    }
+    if (timingSafeCompareText(ownerPasscode, cofounderPasscode)) {
+      return {
+        status: 400,
+        payload: {
+          ok: false,
+          error: 'Owner and Co-Founder must use two different passcodes.',
+        },
+      };
+    }
+  }
+
+  const saveOwner = await upsertRoleCredential('owner', ownerUsername, hashPasscode(ownerPasscode));
+  if (!saveOwner.ok) {
+    return {
+      status: 502,
+      payload: { ok: false, error: saveOwner.error ?? 'Failed to save Owner credentials.' },
+    };
+  }
+
+  if (hasCofounderInput) {
+    const saveCofounder = await upsertRoleCredential(
+      'co_founder',
+      cofounderUsername,
+      hashPasscode(cofounderPasscode)
+    );
+    if (!saveCofounder.ok) {
+      return {
+        status: 502,
+        payload: {
+          ok: false,
+          error: saveCofounder.error ?? 'Failed to save Co-Founder credentials.',
+        },
+      };
+    }
+  }
+
+  const session = createSignedToken(ownerUsername, 'Owner');
+  return {
+    status: 201,
+    payload: {
+      ok: true,
+      token: session.token,
+      expiresAt: session.expiresAt,
+      username: ownerUsername,
+      role: 'Owner',
+      authClaimed: true,
+      ownerClaimed: true,
+      cofounderClaimed: hasCofounderInput,
+    },
+  };
+}
+
+export async function handleAdminLogin(
+  body: Record<string, unknown> | null
+): Promise<{ status: number; payload: Record<string, unknown> }> {
+  const username = normalizeUsername(body?.username);
   const passcode = typeof body?.passcode === 'string' ? body.passcode.trim() : '';
+
+  if (!username || !passcode) {
+    return {
+      status: 400,
+      payload: { ok: false, error: 'Admin username and passcode are required.' },
+    };
+  }
+
+  const [ownerCred, cofounderCred] = await Promise.all([
+    readDbCredential('owner'),
+    readDbCredential('co_founder'),
+  ]);
+
+  if (!ownerCred && !cofounderCred) {
+    return {
+      status: 403,
+      payload: {
+        ok: false,
+        needsSetup: true,
+        error: 'Admin credentials have not been set up yet. Complete first-run setup.',
+      },
+    };
+  }
+
+  const candidates = [ownerCred, cofounderCred].filter(
+    (c): c is StoredAdminCredential => Boolean(c)
+  );
+
+  for (const cred of candidates) {
+    if (matchesCredential(cred, username, passcode)) {
+      const displayUser = cred.altEnvUsernames?.includes(username) ? username : cred.username;
+      const session = createSignedToken(displayUser, cred.roleLabel);
+      return {
+        status: 200,
+        payload: {
+          ok: true,
+          token: session.token,
+          expiresAt: session.expiresAt,
+          username: displayUser,
+          role: cred.roleLabel,
+        },
+      };
+    }
+  }
+
+  return {
+    status: 401,
+    payload: { ok: false, error: 'Invalid admin username or passcode.' },
+  };
+}
+
+export async function handleGetAdminCredentials(
+  authorizationHeader: string | undefined
+): Promise<{ status: number; payload: Record<string, unknown> }> {
+  const auth = verifyAdminBearerToken(authorizationHeader);
+  if (!auth.ok) {
+    return { status: auth.status, payload: { ok: false, error: auth.error } };
+  }
+
+  const [ownerCred, cofounderCred] = await Promise.all([
+    readDbCredential('owner'),
+    readDbCredential('co_founder'),
+  ]);
+
+  return {
+    status: 200,
+    payload: {
+      ok: true,
+      owner: {
+        configured: Boolean(ownerCred),
+        source: ownerCred?.source ?? 'unset',
+        username: ownerCred?.username ?? '',
+      },
+      cofounder: {
+        configured: Boolean(cofounderCred),
+        source: cofounderCred?.source ?? 'unset',
+        username: cofounderCred?.username ?? '',
+      },
+    },
+  };
+}
+
+export async function handleSaveAdminCredential(
+  body: Record<string, unknown> | null,
+  authorizationHeader: string | undefined
+): Promise<{ status: number; payload: Record<string, unknown> }> {
+  const auth = verifyAdminBearerToken(authorizationHeader);
+  if (!auth.ok) {
+    return { status: auth.status, payload: { ok: false, error: auth.error } };
+  }
+
+  const roleKey: AdminRoleKey | null =
+    body?.role === 'owner'
+      ? 'owner'
+      : body?.role === 'co_founder'
+        ? 'co_founder'
+        : null;
+
+  if (!roleKey) {
+    return {
+      status: 400,
+      payload: { ok: false, error: 'Role must be "owner" or "co_founder".' },
+    };
+  }
+
+  if (getEnvCredential(roleKey)) {
+    return {
+      status: 409,
+      payload: {
+        ok: false,
+        error:
+          roleKey === 'owner'
+            ? 'Owner credentials are locked by ADMIN_OWNER_PASSCODE / ADMIN_PASSCODE environment variables.'
+            : 'Co-Founder credentials are locked by ADMIN_COFOUNDER_PASSCODE environment variable.',
+      },
+    };
+  }
+
+  const username = normalizeUsername(body?.username);
+  const passcode = typeof body?.passcode === 'string' ? body.passcode.trim() : '';
+
+  if (!isValidUsername(username)) {
+    return {
+      status: 400,
+      payload: {
+        ok: false,
+        error:
+          'Username must be 3–64 characters using letters, numbers, dots, underscores, hyphens, or @.',
+      },
+    };
+  }
   if (passcode.length < 8 || passcode.length > 128) {
     return {
       status: 400,
@@ -209,97 +661,44 @@ export async function handleClaimAdminPasscode(
     };
   }
 
-  const existing = await readClaimedHash();
-  if (existing) {
-    return {
-      status: 409,
-      payload: {
-        ok: false,
-        error: 'Admin passcode has already been claimed. Use sign-in instead.',
-      },
-    };
-  }
-
-  const hashed = hashPasscode(passcode);
-  const saved = await writeClaimedHashIfUnset(hashed);
-  if (!saved.ok) {
-    return {
-      status: 409,
-      payload: {
-        ok: false,
-        error: 'Admin passcode has already been claimed. Use sign-in instead.',
-      },
-    };
-  }
-
-  const session = createSignedToken();
-  return {
-    status: 201,
-    payload: {
-      ok: true,
-      token: session.token,
-      expiresAt: session.expiresAt,
-      authClaimed: true,
-    },
-  };
-}
-
-export async function handleAdminLogin(
-  body: Record<string, unknown> | null
-): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const passcode = typeof body?.passcode === 'string' ? body.passcode.trim() : '';
-  if (!passcode) {
-    return {
-      status: 400,
-      payload: { ok: false, error: 'Admin passcode is required.' },
-    };
-  }
-
-  const envPasscode = process.env.ADMIN_PASSCODE?.trim();
-  if (envPasscode) {
-    if (!timingSafeCompareText(passcode, envPasscode)) {
+  const otherRoleKey: AdminRoleKey = roleKey === 'owner' ? 'co_founder' : 'owner';
+  const otherCred = await readDbCredential(otherRoleKey);
+  if (otherCred) {
+    const otherNames = [otherCred.username, ...(otherCred.altEnvUsernames ?? [])];
+    if (otherNames.some((n) => timingSafeCompareText(username, n))) {
       return {
-        status: 401,
-        payload: { ok: false, error: 'Invalid admin passcode.' },
+        status: 400,
+        payload: {
+          ok: false,
+          error: `${roleLabelFromKey(roleKey)} username must be different from ${otherCred.roleLabel} username.`,
+        },
       };
     }
-    const session = createSignedToken();
+    if (matchesPasscodeOnly(otherCred, passcode)) {
+      return {
+        status: 400,
+        payload: {
+          ok: false,
+          error: `${roleLabelFromKey(roleKey)} passcode must be different from ${otherCred.roleLabel} passcode.`,
+        },
+      };
+    }
+  }
+
+  const saved = await upsertRoleCredential(roleKey, username, hashPasscode(passcode));
+  if (!saved.ok) {
     return {
-      status: 200,
-      payload: {
-        ok: true,
-        token: session.token,
-        expiresAt: session.expiresAt,
-      },
+      status: 502,
+      payload: { ok: false, error: saved.error ?? 'Failed to save admin credentials.' },
     };
   }
 
-  const storedHash = await readClaimedHash();
-  if (!storedHash) {
-    return {
-      status: 403,
-      payload: {
-        ok: false,
-        needsSetup: true,
-        error: 'Admin passcode has not been set up yet. Complete first-run setup.',
-      },
-    };
-  }
-
-  if (!verifyPasscodeHash(passcode, storedHash)) {
-    return {
-      status: 401,
-      payload: { ok: false, error: 'Invalid admin passcode.' },
-    };
-  }
-
-  const session = createSignedToken();
   return {
     status: 200,
     payload: {
       ok: true,
-      token: session.token,
-      expiresAt: session.expiresAt,
+      role: roleLabelFromKey(roleKey),
+      username,
     },
   };
 }

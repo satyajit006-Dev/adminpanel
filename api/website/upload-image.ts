@@ -1,6 +1,6 @@
 import type { ServerResponse } from 'http';
-import { handleUploadProductImage } from '../../lib/supabaseAdminData';
-import { readJsonBody, sendJson, type VercelNodeRequest } from '../../lib/vercelHttp';
+import { handleUploadProductImage } from '../../lib/supabaseAdminData.js';
+import { readJsonBody, sendJson, type VercelNodeRequest } from '../../lib/vercelHttp.js';
 
 export default async function handler(req: VercelNodeRequest, res: ServerResponse) {
   if (req.method !== 'POST') {
@@ -8,9 +8,16 @@ export default async function handler(req: VercelNodeRequest, res: ServerRespons
     return;
   }
 
-  const authHeader =
-    typeof req.headers.authorization === 'string' ? req.headers.authorization : undefined;
-  const body = await readJsonBody(req);
-  const result = await handleUploadProductImage(body, authHeader);
-  sendJson(res, result.status, result.payload);
+  try {
+    const authHeader =
+      typeof req.headers.authorization === 'string' ? req.headers.authorization : undefined;
+    const body = await readJsonBody(req);
+    const result = await handleUploadProductImage(body, authHeader);
+    sendJson(res, result.status, result.payload);
+  } catch (err) {
+    sendJson(res, 500, {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Image upload API error',
+    });
+  }
 }

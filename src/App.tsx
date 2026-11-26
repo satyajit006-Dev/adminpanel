@@ -51,6 +51,7 @@ import {
 } from './data/apparelSeedData';
 import type {
   AccountStatus,
+  AdminRoleLabel,
   ApparelCategory,
   ApparelOrder,
   ApparelProduct,
@@ -195,6 +196,8 @@ export default function App() {
   const [notifications, setNotifications] = useState<LiveNotification[]>([]);
   // Admin session Bearer token is held strictly in JS/React memory (never localStorage/sessionStorage)
   const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [adminUsername, setAdminUsername] = useState<string | null>(null);
+  const [adminRole, setAdminRole] = useState<AdminRoleLabel | null>(null);
   const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
   const [backendConfig, setBackendConfig] = useState<BackendWebsiteConfig>({
     checked: false,
@@ -208,7 +211,14 @@ export default function App() {
     authConfigured: false,
     authRequired: true,
     authClaimed: false,
+    ownerClaimed: false,
+    cofounderClaimed: false,
     usingEnvPasscode: false,
+    usingEnvUsername: false,
+    usingEnvOwnerPasscode: false,
+    usingEnvCofounderPasscode: false,
+    usingEnvOwnerUsername: false,
+    usingEnvCofounderUsername: false,
   });
 
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -221,7 +231,7 @@ export default function App() {
       const res = await fetch('/api/website/config');
       const contentType = res.headers.get('content-type') ?? '';
       if (!res.ok || !contentType.includes('application/json')) {
-        throw new Error('Config endpoint unavailable');
+        throw new Error(`Backend config endpoint returned HTTP ${res.status}`);
       }
       const data = (await res.json()) as Partial<BackendWebsiteConfig>;
       setBackendConfig({
@@ -236,14 +246,24 @@ export default function App() {
         authConfigured: Boolean(data.authConfigured),
         authRequired: data.authRequired !== false,
         authClaimed: Boolean(data.authClaimed),
+        ownerClaimed: Boolean(data.ownerClaimed),
+        cofounderClaimed: Boolean(data.cofounderClaimed),
         usingEnvPasscode: Boolean(data.usingEnvPasscode),
+        usingEnvUsername: Boolean(data.usingEnvUsername),
+        usingEnvOwnerPasscode: Boolean(data.usingEnvOwnerPasscode),
+        usingEnvCofounderPasscode: Boolean(data.usingEnvCofounderPasscode),
+        usingEnvOwnerUsername: Boolean(data.usingEnvOwnerUsername),
+        usingEnvCofounderUsername: Boolean(data.usingEnvCofounderUsername),
+        configError: undefined,
       });
-    } catch {
+    } catch (err) {
       setBackendConfig((prev) => ({
         ...prev,
         checked: true,
         serverConfigured: false,
         supabaseConfigured: false,
+        configError:
+          err instanceof Error ? err.message : 'Unable to reach /api/website/config',
       }));
     }
   }, []);
@@ -957,6 +977,8 @@ export default function App() {
 
   const handleSignOut = () => {
     setAdminToken(null);
+    setAdminUsername(null);
+    setAdminRole(null);
     setMobileOpen(false);
     setSelectedOrderId(null);
     setSelectedTxId(null);
@@ -973,16 +995,18 @@ export default function App() {
           onToggleTheme={() => setIsDark((p) => !p)}
           backendConfig={backendConfig}
           onRefreshConfig={refreshBackendConfig}
-          onAuthenticated={(token, isFirstClaim) => {
+          onAuthenticated={(token, username, role, isFirstClaim) => {
             setAdminToken(token);
+            setAdminUsername(username);
+            setAdminRole(role);
             void refreshBackendConfig();
             if (backendConfig.supabaseConfigured) {
               void syncAllFromSupabase(token, false);
             }
             notify(
               isFirstClaim
-                ? 'Admin passcode saved and session unlocked.'
-                : 'Signed in to Admin Panel.'
+                ? `Owner & Co-Founder credentials saved. Signed in as ${username} (${role}).`
+                : `Signed in as ${username} (${role}).`
             );
           }}
         />
@@ -1003,8 +1027,8 @@ export default function App() {
         mobileOpen={mobileOpen}
         onCloseMobile={() => setMobileOpen(false)}
         brandName={settings.brandName}
-        adminName={settings.adminName}
-        adminEmail={settings.email}
+        adminName={adminUsername || settings.adminName}
+        adminEmail={adminRole ? `${adminRole} · ${settings.email || 'Admin Access'}` : settings.email}
         onSignOut={handleSignOut}
       />
 
@@ -1241,6 +1265,9 @@ export default function App() {
           {activeRoute === 'staff' && (
             <ApparelStaffView
               staff={staff}
+              adminToken={adminToken}
+              onRefreshConfig={refreshBackendConfig}
+              onNotify={notify}
               onToggleStaffStatus={(id) => {
                 setStaff((prev) =>
                   prev.map((s) =>

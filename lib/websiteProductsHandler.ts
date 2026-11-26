@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getAuthStatus, verifyAdminBearerToken } from './adminAuth';
+import { getAuthStatus, verifyAdminBearerToken } from './adminAuth.js';
 import {
   getProductsTableName,
   getStorageBucketName,
@@ -7,7 +7,7 @@ import {
   getSupabaseOrigin,
   isSupabaseConfigured,
   parseSafeHttpUrl,
-} from './supabaseClient';
+} from './supabaseClient.js';
 
 export interface NormalizedProductPayload {
   id: string;
@@ -262,7 +262,14 @@ export async function getWebsiteConfig() {
     authConfigured: Boolean(process.env.WEBSITE_API_KEY?.trim()),
     authRequired: true,
     authClaimed: authStatus.authClaimed,
+    ownerClaimed: authStatus.ownerClaimed,
+    cofounderClaimed: authStatus.cofounderClaimed,
     usingEnvPasscode: authStatus.usingEnvPasscode,
+    usingEnvUsername: authStatus.usingEnvUsername,
+    usingEnvOwnerPasscode: authStatus.usingEnvOwnerPasscode,
+    usingEnvCofounderPasscode: authStatus.usingEnvCofounderPasscode,
+    usingEnvOwnerUsername: authStatus.usingEnvOwnerUsername,
+    usingEnvCofounderUsername: authStatus.usingEnvCofounderUsername,
   };
 }
 

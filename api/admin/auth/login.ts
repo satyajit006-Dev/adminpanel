@@ -1,6 +1,6 @@
 import type { ServerResponse } from 'http';
-import { handleAdminLogin } from '../../../lib/adminAuth';
-import { readJsonBody, sendJson, type VercelNodeRequest } from '../../../lib/vercelHttp';
+import { handleAdminLogin } from '../../../lib/adminAuth.js';
+import { readJsonBody, sendJson, type VercelNodeRequest } from '../../../lib/vercelHttp.js';
 
 export default async function handler(req: VercelNodeRequest, res: ServerResponse) {
   if (req.method !== 'POST') {
@@ -8,7 +8,14 @@ export default async function handler(req: VercelNodeRequest, res: ServerRespons
     return;
   }
 
-  const body = await readJsonBody(req);
-  const result = await handleAdminLogin(body);
-  sendJson(res, result.status, result.payload);
+  try {
+    const body = await readJsonBody(req);
+    const result = await handleAdminLogin(body);
+    sendJson(res, result.status, result.payload);
+  } catch (err) {
+    sendJson(res, 500, {
+      ok: false,
+      error: err instanceof Error ? err.message : 'Internal authentication error',
+    });
+  }
 }

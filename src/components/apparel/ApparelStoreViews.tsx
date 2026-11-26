@@ -1,5 +1,18 @@
-import { Check, Moon, Pencil, Plus, Shirt, Sun, Trash2, UploadCloud } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import {
+  Check,
+  Eye,
+  EyeOff,
+  KeyRound,
+  Moon,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  Shirt,
+  Sun,
+  Trash2,
+  UploadCloud,
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import type {
   ApparelCategory,
   ApparelProduct,
@@ -699,19 +712,134 @@ export function ApparelDeliveryView({
   );
 }
 
+interface RoleCredentialStatus {
+  configured: boolean;
+  source: 'env' | 'database' | 'memory' | 'unset';
+  username: string;
+}
+
 export function ApparelStaffView({
   staff,
+  adminToken,
   onToggleStaffStatus,
   onAddStaff,
+  onRefreshConfig,
+  onNotify,
 }: {
   staff: StaffMember[];
+  adminToken?: string | null;
   onToggleStaffStatus: (id: string) => void;
   onAddStaff: (member: StaffMember) => void;
+  onRefreshConfig?: () => Promise<void>;
+  onNotify?: (message: string) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<StaffMember['role']>('Merchandiser');
+
+  // Dual Owner & Co-Founder Credentials State
+  const [credStatus, setCredStatus] = useState<{
+    owner: RoleCredentialStatus;
+    cofounder: RoleCredentialStatus;
+  } | null>(null);
+  const [editingRole, setEditingRole] = useState<'owner' | 'co_founder'>('co_founder');
+  const [credUsername, setCredUsername] = useState('');
+  const [credPasscode, setCredPasscode] = useState('');
+  const [credConfirm, setCredConfirm] = useState('');
+  const [showCredPasscode, setShowCredPasscode] = useState(false);
+  const [showCredConfirm, setShowCredConfirm] = useState(false);
+  const [savingCred, setSavingCred] = useState(false);
+  const [credError, setCredError] = useState<string | null>(null);
+
+  const loadCredentialStatus = useCallback(async () => {
+    if (!adminToken) return;
+    try {
+      const res = await fetch('/api/admin/auth/credentials', {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      if (!res.ok) return;
+      const data = (await res.json()) as {
+        ok?: boolean;
+        owner?: RoleCredentialStatus;
+        cofounder?: RoleCredentialStatus;
+      };
+      if (data.ok && data.owner && data.cofounder) {
+        setCredStatus({ owner: data.owner, cofounder: data.cofounder });
+      }
+    } catch {
+      // Ignore background fetch error
+    }
+  }, [adminToken]);
+
+  useEffect(() => {
+    void loadCredentialStatus();
+  }, [loadCredentialStatus]);
+
+  useEffect(() => {
+    if (!credStatus) return;
+    const current = editingRole === 'owner' ? credStatus.owner : credStatus.cofounder;
+    setCredUsername(current.username || '');
+    setCredPasscode('');
+    setCredConfirm('');
+    setCredError(null);
+  }, [editingRole, credStatus]);
+
+  const handleSaveCredential = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminToken) return;
+    setCredError(null);
+
+    const cleanedUser = credUsername.trim().toLowerCase();
+    const cleanedPass = credPasscode.trim();
+    if (!/^[a-z0-9._@-]{3,64}$/.test(cleanedUser)) {
+      setCredError('Username must be 3–64 characters (letters, numbers, ., _, -, @).');
+      return;
+    }
+    if (cleanedPass.length < 8) {
+      setCredError('Passcode must be at least 8 characters.');
+      return;
+    }
+    if (cleanedPass !== credConfirm.trim()) {
+      setCredError('Passcodes do not match. Click the eye icon to verify.');
+      return;
+    }
+
+    setSavingCred(true);
+    try {
+      const res = await fetch('/api/admin/auth/credentials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          role: editingRole,
+          username: cleanedUser,
+          passcode: cleanedPass,
+        }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string; role?: string };
+      if (!res.ok || !data.ok) {
+        setCredError(data.error ?? `Failed to save credentials (HTTP ${res.status}).`);
+        return;
+      }
+
+      setCredPasscode('');
+      setCredConfirm('');
+      setShowCredPasscode(false);
+      setShowCredConfirm(false);
+      await loadCredentialStatus();
+      if (onRefreshConfig) await onRefreshConfig();
+      onNotify?.(
+        `Saved ${editingRole === 'owner' ? 'Owner' : 'Co-Founder'} login credentials (${cleanedUser}).`
+      );
+    } catch {
+      setCredError('Network error saving credentials.');
+    } finally {
+      setSavingCred(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -729,8 +857,200 @@ export function ApparelStaffView({
     setAdding(false);
   };
 
+  const selectedCredInfo =
+    credStatus ? (editingRole === 'owner' ? credStatus.owner : credStatus.cofounder) : null;
+  const lockedByEnv = selectedCredInfo?.source === 'env';
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Owner & Co-Founder Login Passcodes */}
+      <section className="rounded-xl border border-line bg-surface p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-line-subtle pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4 text-accent-text" aria-hidden="true" />
+              <h2 className="font-display text-sm font-semibold text-ink">
+                Owner &amp; Co-Founder Login Passcodes
+              </h2>
+            </div>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              Maintain two distinct admin logins — one for the Owner and one for the Co-Founder — with separate usernames and passcodes.
+            </p>
+          </div>
+          <div className="inline-flex rounded-lg border border-line bg-subtle p-1 self-start">
+            <button
+              type="button"
+              onClick={() => setEditingRole('owner')}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+                editingRole === 'owner'
+                  ? 'bg-surface text-ink shadow-xs'
+                  : 'text-ink-secondary hover:text-ink'
+              }`}
+            >
+              Owner
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingRole('co_founder')}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+                editingRole === 'co_founder'
+                  ? 'bg-surface text-ink shadow-xs'
+                  : 'text-ink-secondary hover:text-ink'
+              }`}
+            >
+              Co-Founder
+            </button>
+          </div>
+        </div>
+
+        {credStatus && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="rounded-lg border border-line-subtle bg-subtle/40 px-4 py-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-semibold text-ink">Owner Account</p>
+                <p className="font-mono text-[11px] text-ink-muted truncate">
+                  {credStatus.owner.configured
+                    ? `Username: ${credStatus.owner.username}`
+                    : 'Not configured yet'}
+                </p>
+              </div>
+              <span
+                className={`font-medium shrink-0 ${
+                  credStatus.owner.configured
+                    ? 'text-emerald-700 dark:text-emerald-400'
+                    : 'text-amber-700 dark:text-amber-400'
+                }`}
+              >
+                {credStatus.owner.source === 'env'
+                  ? 'Env Secret'
+                  : credStatus.owner.configured
+                    ? 'Active'
+                    : 'Unset'}
+              </span>
+            </div>
+
+            <div className="rounded-lg border border-line-subtle bg-subtle/40 px-4 py-3 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-semibold text-ink">Co-Founder Account</p>
+                <p className="font-mono text-[11px] text-ink-muted truncate">
+                  {credStatus.cofounder.configured
+                    ? `Username: ${credStatus.cofounder.username}`
+                    : 'Not configured yet'}
+                </p>
+              </div>
+              <span
+                className={`font-medium shrink-0 ${
+                  credStatus.cofounder.configured
+                    ? 'text-emerald-700 dark:text-emerald-400'
+                    : 'text-amber-700 dark:text-amber-400'
+                }`}
+              >
+                {credStatus.cofounder.source === 'env'
+                  ? 'Env Secret'
+                  : credStatus.cofounder.configured
+                    ? 'Active'
+                    : 'Unset'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {lockedByEnv ? (
+          <p className="text-xs text-ink-muted">
+            {editingRole === 'owner'
+              ? 'Owner credentials are managed by ADMIN_OWNER_PASSCODE / ADMIN_PASSCODE in your server environment variables.'
+              : 'Co-Founder credentials are managed by ADMIN_COFOUNDER_PASSCODE in your server environment variables.'}
+          </p>
+        ) : (
+          <form onSubmit={handleSaveCredential} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
+            <div>
+              <label className="block text-[11px] font-medium text-ink-secondary mb-1">
+                {editingRole === 'owner' ? 'Owner Username *' : 'Co-Founder Username *'}
+              </label>
+              <input
+                type="text"
+                required
+                autoCapitalize="none"
+                spellCheck={false}
+                value={credUsername}
+                onChange={(e) => setCredUsername(e.target.value)}
+                placeholder={editingRole === 'owner' ? 'owner' : 'cofounder'}
+                className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-ink-secondary mb-1">
+                {editingRole === 'owner' ? 'Owner Passcode *' : 'Co-Founder Passcode *'}
+              </label>
+              <div className="relative">
+                <input
+                  type={showCredPasscode ? 'text' : 'password'}
+                  required
+                  value={credPasscode}
+                  onChange={(e) => setCredPasscode(e.target.value)}
+                  placeholder="Min 8 chars"
+                  className="w-full rounded-lg border border-line bg-surface py-2 pl-3 pr-8 text-xs text-ink focus:border-accent focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCredPasscode((p) => !p)}
+                  aria-label={showCredPasscode ? 'Hide passcode' : 'Show passcode'}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-muted hover:text-ink"
+                >
+                  {showCredPasscode ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-medium text-ink-secondary mb-1">
+                Confirm Passcode *
+              </label>
+              <div className="relative">
+                <input
+                  type={showCredConfirm ? 'text' : 'password'}
+                  required
+                  value={credConfirm}
+                  onChange={(e) => setCredConfirm(e.target.value)}
+                  placeholder="Re-enter passcode"
+                  className="w-full rounded-lg border border-line bg-surface py-2 pl-3 pr-8 text-xs text-ink focus:border-accent focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCredConfirm((p) => !p)}
+                  aria-label={showCredConfirm ? 'Hide confirm passcode' : 'Show confirm passcode'}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-muted hover:text-ink"
+                >
+                  {showCredConfirm ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="sm:pt-5">
+              <button
+                type="submit"
+                disabled={savingCred}
+                className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover disabled:opacity-60 transition-colors whitespace-nowrap"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>
+                  {savingCred
+                    ? 'Saving...'
+                    : `Save ${editingRole === 'owner' ? 'Owner' : 'Co-Founder'}`}
+                </span>
+              </button>
+            </div>
+
+            {credError && (
+              <p className="sm:col-span-4 text-xs font-medium text-red-700 dark:text-red-400">
+                {credError}
+              </p>
+            )}
+          </form>
+        )}
+      </section>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-ink-muted">
           {staff.length} team {staff.length === 1 ? 'member' : 'members'}

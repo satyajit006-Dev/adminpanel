@@ -3,7 +3,12 @@ import express from 'express';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { handleAdminLogin, handleClaimAdminPasscode } from './lib/adminAuth';
+import {
+  handleAdminLogin,
+  handleClaimAdminPasscode,
+  handleGetAdminCredentials,
+  handleSaveAdminCredential,
+} from './lib/adminAuth.js';
 import {
   handleDeleteCustomer,
   handleListCustomers,
@@ -13,13 +18,13 @@ import {
   handleUpdateTransaction,
   handleUploadProductImage,
   handleUpsertCustomer,
-} from './lib/supabaseAdminData';
+} from './lib/supabaseAdminData.js';
 import {
   getWebsiteConfig,
   handleDeleteWebsiteProduct,
   handleListWebsiteProducts,
   handleUpsertWebsiteProduct,
-} from './lib/websiteProductsHandler';
+} from './lib/websiteProductsHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +54,21 @@ async function startServer() {
   app.post('/api/admin/auth/login', async (req, res) => {
     const result = await handleAdminLogin(
       (req.body as Record<string, unknown> | null) ?? null
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.get('/api/admin/auth/credentials', async (req, res) => {
+    const result = await handleGetAdminCredentials(req.headers.authorization);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/admin/auth/credentials', async (req, res) => {
+    const result = await handleSaveAdminCredential(
+      (req.body as Record<string, unknown> | null) ?? null,
+      req.headers.authorization
     );
     res.setHeader('Cache-Control', 'no-store');
     res.status(result.status).json(result.payload);

@@ -189,6 +189,8 @@ export interface ApparelProduct {
   syncError?: string;
 }
 
+export type AdminRoleLabel = 'Owner' | 'Co-Founder';
+
 export interface BackendWebsiteConfig {
   checked: boolean;
   serverConfigured: boolean;
@@ -201,7 +203,15 @@ export interface BackendWebsiteConfig {
   authConfigured: boolean;
   authRequired: boolean;
   authClaimed: boolean;
+  ownerClaimed?: boolean;
+  cofounderClaimed?: boolean;
   usingEnvPasscode: boolean;
+  usingEnvUsername?: boolean;
+  usingEnvOwnerPasscode?: boolean;
+  usingEnvCofounderPasscode?: boolean;
+  usingEnvOwnerUsername?: boolean;
+  usingEnvCofounderUsername?: boolean;
+  configError?: string;
 }
 
 export interface ApparelCategory {
