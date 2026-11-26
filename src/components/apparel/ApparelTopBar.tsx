@@ -50,6 +50,7 @@ const ROUTE_TITLES: Record<ApparelRoute, string> = {
   accounts: 'User Accounts',
   delivery: 'Delivery & Shipping',
   staff: 'Staff & Permissions',
+  session_history: 'Login & Logout History',
   settings: 'Business Settings',
 };
 

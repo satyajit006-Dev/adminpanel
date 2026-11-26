@@ -19,6 +19,7 @@ import {
 } from './components/apparel/ApparelFinanceSubViews';
 import { ApparelLiveOrdersView } from './components/apparel/ApparelLiveOrdersView';
 import { ApparelOrderDrawer } from './components/apparel/ApparelOrderDrawer';
+import { ApparelSessionHistoryView } from './components/apparel/ApparelSessionHistoryView';
 import { ApparelSidebar } from './components/apparel/ApparelSidebar';
 import {
   ApparelCategoriesView,
@@ -52,6 +53,7 @@ import {
 import type {
   AccountStatus,
   AdminRoleLabel,
+  AdminSessionHistoryEntry,
   ApparelCategory,
   ApparelOrder,
   ApparelProduct,
@@ -116,6 +118,35 @@ function saveState<T>(key: string, value: T): void {
   } catch {
     // ignore storage quota errors
   }
+}
+
+const IMMUTABLE_SESSION_HISTORY_KEY = 'apparel_admin_immutable_session_history_v1';
+
+function loadImmutableSessionHistory(): AdminSessionHistoryEntry[] {
+  try {
+    const raw = localStorage.getItem(IMMUTABLE_SESSION_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as AdminSessionHistoryEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function mergeSessionHistory(
+  existing: AdminSessionHistoryEntry[],
+  incoming: AdminSessionHistoryEntry[]
+): AdminSessionHistoryEntry[] {
+  const byId = new Map<string, AdminSessionHistoryEntry>();
+  for (const item of existing) {
+    if (item && item.id) byId.set(item.id, item);
+  }
+  for (const item of incoming) {
+    if (item && item.id) byId.set(item.id, item);
+  }
+  return Array.from(byId.values())
+    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+    .slice(0, 500);
 }
 
 export default function App() {
@@ -198,6 +229,11 @@ export default function App() {
   const [adminToken, setAdminToken] = useState<string | null>(null);
   const [adminUsername, setAdminUsername] = useState<string | null>(null);
   const [adminRole, setAdminRole] = useState<AdminRoleLabel | null>(null);
+  const [sessionHistory, setSessionHistory] = useState<AdminSessionHistoryEntry[]>(() =>
+    loadImmutableSessionHistory()
+  );
+  const [sessionHistoryLoading, setSessionHistoryLoading] = useState(false);
+  const [sessionHistoryTableMissing, setSessionHistoryTableMissing] = useState(false);
   const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
   const [backendConfig, setBackendConfig] = useState<BackendWebsiteConfig>({
     checked: false,
@@ -271,6 +307,43 @@ export default function App() {
   useEffect(() => {
     void refreshBackendConfig();
   }, [refreshBackendConfig]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(IMMUTABLE_SESSION_HISTORY_KEY, JSON.stringify(sessionHistory));
+    } catch {
+      // ignore storage quota errors
+    }
+  }, [sessionHistory]);
+
+  const fetchSessionHistory = useCallback(
+    async (tokenOverride?: string) => {
+      const activeToken = tokenOverride ?? adminToken;
+      if (!activeToken) return;
+      setSessionHistoryLoading(true);
+      try {
+        const res = await fetch('/api/admin/session-history', {
+          headers: { Authorization: `Bearer ${activeToken}` },
+        });
+        const contentType = res.headers.get('content-type') ?? '';
+        if (!res.ok || !contentType.includes('application/json')) return;
+        const data = (await res.json()) as {
+          ok?: boolean;
+          tableMissing?: boolean;
+          history?: AdminSessionHistoryEntry[];
+        };
+        if (data.ok && Array.isArray(data.history)) {
+          setSessionHistoryTableMissing(Boolean(data.tableMissing));
+          setSessionHistory((prev) => mergeSessionHistory(prev, data.history ?? []));
+        }
+      } catch {
+        // Keep local immutable history if offline
+      } finally {
+        setSessionHistoryLoading(false);
+      }
+    },
+    [adminToken]
+  );
 
   const pullProductsFromSupabase = useCallback(
     async (tokenOverride?: string) => {
@@ -976,6 +1049,51 @@ export default function App() {
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId) ?? null;
 
   const handleSignOut = () => {
+    const activeToken = adminToken;
+    const currentUsername = adminUsername || 'admin';
+    const currentRole: AdminRoleLabel = adminRole === 'Co-Founder' ? 'Co-Founder' : 'Owner';
+
+    if (activeToken) {
+      void fetch('/api/admin/auth/logout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${activeToken}` },
+      })
+        .then(async (res) => {
+          const contentType = res.headers.get('content-type') ?? '';
+          if (res.ok && contentType.includes('application/json')) {
+            const data = (await res.json()) as { historyEntry?: AdminSessionHistoryEntry };
+            if (data.historyEntry) {
+              setSessionHistory((prev) => mergeSessionHistory(prev, [data.historyEntry!]));
+              return;
+            }
+          }
+          setSessionHistory((prev) =>
+            mergeSessionHistory(prev, [
+              {
+                id: `AUTH-LOCAL-${Date.now()}`,
+                username: currentUsername,
+                role: currentRole,
+                eventType: 'logout',
+                occurredAt: new Date().toISOString(),
+              },
+            ])
+          );
+        })
+        .catch(() => {
+          setSessionHistory((prev) =>
+            mergeSessionHistory(prev, [
+              {
+                id: `AUTH-LOCAL-${Date.now()}`,
+                username: currentUsername,
+                role: currentRole,
+                eventType: 'logout',
+                occurredAt: new Date().toISOString(),
+              },
+            ])
+          );
+        });
+    }
+
     setAdminToken(null);
     setAdminUsername(null);
     setAdminRole(null);
@@ -995,11 +1113,15 @@ export default function App() {
           onToggleTheme={() => setIsDark((p) => !p)}
           backendConfig={backendConfig}
           onRefreshConfig={refreshBackendConfig}
-          onAuthenticated={(token, username, role) => {
+          onAuthenticated={(token, username, role, historyEntry) => {
             setAdminToken(token);
             setAdminUsername(username);
             setAdminRole(role);
+            if (historyEntry) {
+              setSessionHistory((prev) => mergeSessionHistory(prev, [historyEntry]));
+            }
             void refreshBackendConfig();
+            void fetchSessionHistory(token);
             if (backendConfig.supabaseConfigured) {
               void syncAllFromSupabase(token, false);
             }
@@ -1278,6 +1400,15 @@ export default function App() {
                 setStaff((prev) => [...prev, member]);
                 notify(`Added staff member ${member.name}`);
               }}
+            />
+          )}
+
+          {activeRoute === 'session_history' && (
+            <ApparelSessionHistoryView
+              history={sessionHistory}
+              loading={sessionHistoryLoading}
+              tableMissing={sessionHistoryTableMissing}
+              onRefresh={() => void fetchSessionHistory()}
             />
           )}
 

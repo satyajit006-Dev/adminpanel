@@ -198,3 +198,33 @@ create policy "Public can view product images"
   for select
   to anon, authenticated
   using (bucket_id = 'product-images');
+
+-- 7. Immutable Admin Login & Logout History (append-only, cannot be updated or deleted)
+create table if not exists public.admin_session_history (
+  id text primary key,
+  username text not null,
+  role text not null default 'Owner',
+  event_type text not null check (event_type in ('login', 'logout')),
+  occurred_at timestamptz not null default now()
+);
+
+create index if not exists idx_admin_session_history_occurred_at
+  on public.admin_session_history (occurred_at desc);
+
+alter table public.admin_session_history enable row level security;
+
+create or replace function public.prevent_admin_session_history_mutation()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'admin_session_history is immutable and cannot be updated or deleted';
+end;
+$$;
+
+drop trigger if exists trg_prevent_admin_session_history_mutation on public.admin_session_history;
+create trigger trg_prevent_admin_session_history_mutation
+  before update or delete on public.admin_session_history
+  for each row
+  execute function public.prevent_admin_session_history_mutation();
+

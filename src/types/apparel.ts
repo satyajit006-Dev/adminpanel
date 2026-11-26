@@ -14,6 +14,7 @@ export type ApparelRoute =
   | 'accounts'
   | 'delivery'
   | 'staff'
+  | 'session_history'
   | 'settings';
 
 export type ThemePreset = 'indigo' | 'pine' | 'burgundy' | 'slate';
@@ -190,6 +191,14 @@ export interface ApparelProduct {
 }
 
 export type AdminRoleLabel = 'Owner' | 'Co-Founder';
+
+export interface AdminSessionHistoryEntry {
+  id: string;
+  username: string;
+  role: AdminRoleLabel;
+  eventType: 'login' | 'logout';
+  occurredAt: string;
+}
 
 export interface BackendWebsiteConfig {
   checked: boolean;

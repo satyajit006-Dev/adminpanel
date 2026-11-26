@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ClipboardList,
   FolderTree,
+  History,
   LayoutDashboard,
   LogOut,
   Radio,
@@ -120,6 +121,7 @@ export function ApparelSidebar({
       heading: 'Configuration',
       items: [
         { id: 'staff', label: 'Staff & Permissions', icon: ShieldCheck },
+        { id: 'session_history', label: 'Login & Logout History', icon: History },
         { id: 'settings', label: 'Settings', icon: Settings },
       ],
     },
@@ -213,15 +215,30 @@ export function ApparelSidebar({
             <p className="truncate text-[11px] text-sidebar-muted">{operatorSub}</p>
           </div>
         </button>
-        <button
-          type="button"
-          onClick={onSignOut}
-          title="Sign out of Admin Panel"
-          aria-label="Sign out of Admin Panel"
-          className="shrink-0 rounded-lg p-2 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink transition-colors"
-        >
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => handleSelect('session_history')}
+            title="Login & Logout History (cannot be deleted)"
+            aria-label="View Login and Logout History"
+            className={`shrink-0 rounded-lg p-2 transition-colors ${
+              activeRoute === 'session_history'
+                ? 'bg-sidebar-active text-sidebar-active-ink'
+                : 'text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink'
+            }`}
+          >
+            <History className="h-4 w-4" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={onSignOut}
+            title="Sign out of Admin Panel"
+            aria-label="Sign out of Admin Panel"
+            className="shrink-0 rounded-lg p-2 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink transition-colors"
+          >
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );

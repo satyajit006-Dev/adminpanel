@@ -5,8 +5,10 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import {
   handleAdminLogin,
+  handleAdminLogout,
   handleClaimAdminPasscode,
   handleGetAdminCredentials,
+  handleListSessionHistory,
   handleSaveAdminCredential,
 } from './lib/adminAuth.js';
 import {
@@ -57,6 +59,26 @@ async function startServer() {
     );
     res.setHeader('Cache-Control', 'no-store');
     res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/admin/auth/logout', async (req, res) => {
+    const result = await handleAdminLogout(req.headers.authorization);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.get('/api/admin/session-history', async (req, res) => {
+    const result = await handleListSessionHistory(req.headers.authorization);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.all('/api/admin/session-history', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(405).json({
+      ok: false,
+      error: 'Login & logout history is permanent and cannot be modified or deleted.',
+    });
   });
 
   app.get('/api/admin/auth/credentials', async (req, res) => {

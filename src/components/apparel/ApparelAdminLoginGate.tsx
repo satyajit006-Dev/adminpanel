@@ -1,13 +1,22 @@
 import { Eye, EyeOff, KeyRound, Moon, ShieldCheck, Sun, User } from 'lucide-react';
 import { useState } from 'react';
-import type { AdminRoleLabel, BackendWebsiteConfig } from '../../types/apparel';
+import type {
+  AdminRoleLabel,
+  AdminSessionHistoryEntry,
+  BackendWebsiteConfig,
+} from '../../types/apparel';
 
 interface ApparelAdminLoginGateProps {
   brandName: string;
   isDark: boolean;
   onToggleTheme: () => void;
   backendConfig: BackendWebsiteConfig;
-  onAuthenticated: (token: string, username: string, role: AdminRoleLabel) => void;
+  onAuthenticated: (
+    token: string,
+    username: string,
+    role: AdminRoleLabel,
+    historyEntry?: AdminSessionHistoryEntry
+  ) => void;
   onRefreshConfig: () => Promise<void>;
 }
 
@@ -68,6 +77,7 @@ export function ApparelAdminLoginGate({
         token?: string;
         username?: string;
         role?: AdminRoleLabel;
+        historyEntry?: AdminSessionHistoryEntry;
         error?: string;
       };
 
@@ -80,7 +90,7 @@ export function ApparelAdminLoginGate({
       const authenticatedRole: AdminRoleLabel = data.role === 'Co-Founder' ? 'Co-Founder' : 'Owner';
       setPasscode('');
       setShowPasscode(false);
-      onAuthenticated(data.token, authenticatedUser, authenticatedRole);
+      onAuthenticated(data.token, authenticatedUser, authenticatedRole, data.historyEntry);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to reach authentication server.');
     } finally {

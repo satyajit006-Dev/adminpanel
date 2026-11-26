@@ -20,6 +20,52 @@ interface StoredAdminCredential {
 // In-memory fallback when Supabase is not yet configured and env passcodes are unset
 const inMemoryCredentials: Partial<Record<AdminRoleKey, StoredAdminCredential>> = {};
 
+export interface AdminSessionHistoryEntry {
+  id: string;
+  username: string;
+  role: AdminRoleLabel;
+  eventType: 'login' | 'logout';
+  occurredAt: string;
+}
+
+const inMemorySessionHistory: AdminSessionHistoryEntry[] = [];
+
+async function recordAdminSessionEvent(params: {
+  username: string;
+  role: AdminRoleLabel;
+  eventType: 'login' | 'logout';
+}): Promise<AdminSessionHistoryEntry> {
+  const entry: AdminSessionHistoryEntry = {
+    id: `AUTH-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+    username: params.username,
+    role: params.role,
+    eventType: params.eventType,
+    occurredAt: new Date().toISOString(),
+  };
+
+  inMemorySessionHistory.unshift(entry);
+  if (inMemorySessionHistory.length > 500) {
+    inMemorySessionHistory.length = 500;
+  }
+
+  const supabase = getSupabaseAdmin();
+  if (supabase) {
+    try {
+      await supabase.from('admin_session_history').insert({
+        id: entry.id,
+        username: entry.username,
+        role: entry.role,
+        event_type: entry.eventType,
+        occurred_at: entry.occurredAt,
+      });
+    } catch {
+      // Keep in-memory audit record if Supabase table is not created yet
+    }
+  }
+
+  return entry;
+}
+
 function roleLabelFromKey(key: AdminRoleKey): AdminRoleLabel {
   return key === 'co_founder' ? 'Co-Founder' : 'Owner';
 }
@@ -440,6 +486,11 @@ export async function handleAdminLogin(
     if (matchesCredential(cred, username, passcode)) {
       const displayUser = cred.altEnvUsernames?.includes(username) ? username : cred.username;
       const session = createSignedToken(displayUser, cred.roleLabel);
+      const historyEntry = await recordAdminSessionEvent({
+        username: displayUser,
+        role: cred.roleLabel,
+        eventType: 'login',
+      });
       return {
         status: 200,
         payload: {
@@ -448,6 +499,7 @@ export async function handleAdminLogin(
           expiresAt: session.expiresAt,
           username: displayUser,
           role: cred.roleLabel,
+          historyEntry,
         },
       };
     }
@@ -477,6 +529,11 @@ export async function handleAdminLogin(
             const roleLabel: AdminRoleLabel =
               row.id === 'co_founder' || row.admin_role === 'Co-Founder' ? 'Co-Founder' : 'Owner';
             const session = createSignedToken(rowUser, roleLabel);
+            const historyEntry = await recordAdminSessionEvent({
+              username: rowUser,
+              role: roleLabel,
+              eventType: 'login',
+            });
             return {
               status: 200,
               payload: {
@@ -485,6 +542,7 @@ export async function handleAdminLogin(
                 expiresAt: session.expiresAt,
                 username: rowUser,
                 role: roleLabel,
+                historyEntry,
               },
             };
           }
@@ -519,6 +577,11 @@ export async function handleAdminLogin(
                 : 'Owner';
             const displayUser = candidateNames[0] || username;
             const session = createSignedToken(displayUser, roleLabel);
+            const historyEntry = await recordAdminSessionEvent({
+              username: displayUser,
+              role: roleLabel,
+              eventType: 'login',
+            });
             return {
               status: 200,
               payload: {
@@ -527,6 +590,7 @@ export async function handleAdminLogin(
                 expiresAt: session.expiresAt,
                 username: displayUser,
                 role: roleLabel,
+                historyEntry,
               },
             };
           }
@@ -682,6 +746,92 @@ export async function handleSaveAdminCredential(
       ok: true,
       role: roleLabelFromKey(roleKey),
       username,
+    },
+  };
+}
+
+export async function handleAdminLogout(
+  authorizationHeader: string | undefined
+): Promise<{ status: number; payload: Record<string, unknown> }> {
+  const auth = verifyAdminBearerToken(authorizationHeader);
+  if (!auth.ok) {
+    return { status: auth.status, payload: { ok: false, error: auth.error } };
+  }
+
+  const username = auth.username || 'admin';
+  const role: AdminRoleLabel = auth.role === 'Co-Founder' ? 'Co-Founder' : 'Owner';
+  const historyEntry = await recordAdminSessionEvent({
+    username,
+    role,
+    eventType: 'logout',
+  });
+
+  return {
+    status: 200,
+    payload: {
+      ok: true,
+      historyEntry,
+    },
+  };
+}
+
+export async function handleListSessionHistory(
+  authorizationHeader: string | undefined
+): Promise<{ status: number; payload: Record<string, unknown> }> {
+  const auth = verifyAdminBearerToken(authorizationHeader);
+  if (!auth.ok) {
+    return { status: auth.status, payload: { ok: false, error: auth.error } };
+  }
+
+  const byId = new Map<string, AdminSessionHistoryEntry>();
+  for (const item of inMemorySessionHistory) {
+    byId.set(item.id, item);
+  }
+
+  let tableMissing = false;
+  const supabase = getSupabaseAdmin();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('admin_session_history')
+        .select('id, username, role, event_type, occurred_at')
+        .order('occurred_at', { ascending: false })
+        .limit(250);
+
+      if (error) {
+        if (error.code === '42P01' || error.code === 'PGRST205') {
+          tableMissing = true;
+        }
+      } else if (Array.isArray(data)) {
+        for (const row of data) {
+          const id = typeof row.id === 'string' ? row.id : '';
+          if (!id) continue;
+          byId.set(id, {
+            id,
+            username: typeof row.username === 'string' ? row.username : 'admin',
+            role: row.role === 'Co-Founder' ? 'Co-Founder' : 'Owner',
+            eventType: row.event_type === 'logout' ? 'logout' : 'login',
+            occurredAt:
+              typeof row.occurred_at === 'string' ? row.occurred_at : new Date().toISOString(),
+          });
+        }
+      }
+    } catch {
+      tableMissing = true;
+    }
+  }
+
+  const history = Array.from(byId.values()).sort(
+    (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+  );
+
+  return {
+    status: 200,
+    payload: {
+      ok: true,
+      immutable: true,
+      tableMissing,
+      history,
     },
   };
 }
