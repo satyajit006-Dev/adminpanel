@@ -3,6 +3,8 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  Lock,
+  LogOut,
   Moon,
   Pencil,
   Plus,
@@ -14,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import type {
+  AdminRoleLabel,
   ApparelCategory,
   ApparelProduct,
   BusinessSettings,
@@ -721,6 +724,9 @@ interface RoleCredentialStatus {
 export function ApparelStaffView({
   staff,
   adminToken,
+  currentAdminRole,
+  revokingCofounder = false,
+  onForceLogoutCofounder,
   onToggleStaffStatus,
   onAddStaff,
   onRefreshConfig,
@@ -728,11 +734,15 @@ export function ApparelStaffView({
 }: {
   staff: StaffMember[];
   adminToken?: string | null;
+  currentAdminRole?: AdminRoleLabel | null;
+  revokingCofounder?: boolean;
+  onForceLogoutCofounder?: () => void;
   onToggleStaffStatus: (id: string) => void;
   onAddStaff: (member: StaffMember) => void;
   onRefreshConfig?: () => Promise<void>;
   onNotify?: (message: string) => void;
 }) {
+  const isOwner = currentAdminRole === 'Owner';
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -785,10 +795,21 @@ export function ApparelStaffView({
     setCredError(null);
   }, [editingRole, credStatus]);
 
+  useEffect(() => {
+    if (!isOwner && editingRole === 'owner') {
+      setEditingRole('co_founder');
+    }
+  }, [isOwner, editingRole]);
+
   const handleSaveCredential = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!adminToken) return;
     setCredError(null);
+
+    if (!isOwner && editingRole === 'owner') {
+      setCredError('Co-Founder cannot make any changes over the Owner.');
+      return;
+    }
 
     const cleanedUser = credUsername.trim().toLowerCase();
     const cleanedPass = credPasscode.trim();
@@ -880,14 +901,17 @@ export function ApparelStaffView({
           <div className="inline-flex rounded-lg border border-line bg-subtle p-1 self-start">
             <button
               type="button"
-              onClick={() => setEditingRole('owner')}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
+              disabled={!isOwner}
+              title={!isOwner ? 'Only Owner can manage Owner credentials' : undefined}
+              onClick={() => isOwner && setEditingRole('owner')}
+              className={`inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-45 disabled:cursor-not-allowed ${
                 editingRole === 'owner'
                   ? 'bg-surface text-ink shadow-xs'
                   : 'text-ink-secondary hover:text-ink'
               }`}
             >
-              Owner
+              {!isOwner && <Lock className="h-3 w-3 shrink-0" aria-hidden="true" />}
+              <span>Owner</span>
             </button>
             <button
               type="button"
@@ -902,6 +926,15 @@ export function ApparelStaffView({
             </button>
           </div>
         </div>
+
+        {!isOwner && (
+          <div className="rounded-lg border border-line-subtle bg-subtle/50 px-3.5 py-2.5 text-xs text-ink-secondary flex items-center gap-2">
+            <Lock className="h-3.5 w-3.5 text-ink-muted shrink-0" aria-hidden="true" />
+            <span>
+              Signed in as Co-Founder. Owner credentials, Owner staff status, and Owner sessions are protected and cannot be modified.
+            </span>
+          </div>
+        )}
 
         {credStatus && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -938,19 +971,32 @@ export function ApparelStaffView({
                     : 'Not configured yet'}
                 </p>
               </div>
-              <span
-                className={`font-medium shrink-0 ${
-                  credStatus.cofounder.configured
-                    ? 'text-emerald-700 dark:text-emerald-400'
-                    : 'text-amber-700 dark:text-amber-400'
-                }`}
-              >
-                {credStatus.cofounder.source === 'env'
-                  ? 'Env Secret'
-                  : credStatus.cofounder.configured
-                    ? 'Active'
-                    : 'Unset'}
-              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span
+                  className={`font-medium ${
+                    credStatus.cofounder.configured
+                      ? 'text-emerald-700 dark:text-emerald-400'
+                      : 'text-amber-700 dark:text-amber-400'
+                  }`}
+                >
+                  {credStatus.cofounder.source === 'env'
+                    ? 'Env Secret'
+                    : credStatus.cofounder.configured
+                      ? 'Active'
+                      : 'Unset'}
+                </span>
+                {isOwner && onForceLogoutCofounder && (
+                  <button
+                    type="button"
+                    disabled={revokingCofounder}
+                    onClick={onForceLogoutCofounder}
+                    className="inline-flex items-center gap-1 rounded-md border border-red-200 dark:border-red-900/60 bg-red-50/70 dark:bg-red-950/20 px-2.5 py-1 text-[11px] font-semibold text-red-700 dark:text-red-400 hover:bg-red-100/80 dark:hover:bg-red-950/40 disabled:opacity-50 transition-colors whitespace-nowrap"
+                  >
+                    <LogOut className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    <span>{revokingCofounder ? 'Logging Out...' : 'Log Out'}</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -1091,8 +1137,8 @@ export function ApparelStaffView({
             onChange={(e) => setRole(e.target.value as StaffMember['role'])}
             className="rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink focus:border-accent focus:outline-none"
           >
-            <option value="Super Admin">Super Admin</option>
-            <option value="Owner">Owner</option>
+            {isOwner && <option value="Super Admin">Super Admin</option>}
+            {isOwner && <option value="Owner">Owner</option>}
             <option value="Merchandiser">Merchandiser</option>
             <option value="Fulfillment Lead">Fulfillment Lead</option>
             <option value="Support Agent">Support Agent</option>
@@ -1128,33 +1174,44 @@ export function ApparelStaffView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-line-subtle">
-                {staff.map((m) => (
-                  <tr key={m.id} className="hover:bg-hover transition-colors">
-                    <td className="py-3 pl-5 pr-3">
-                      <p className="font-semibold text-ink">{m.name}</p>
-                      <p className="text-ink-muted">{m.email}</p>
-                    </td>
-                    <td className="py-3 px-3 font-medium text-ink-secondary">
-                      {m.role}
-                    </td>
-                    <td className="py-3 px-3 font-mono text-ink-muted">
-                      {m.lastLogin}
-                    </td>
-                    <td className="py-3 pl-3 pr-5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onToggleStaffStatus(m.id)}
-                        className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
-                          m.status === 'Active'
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
-                            : 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400'
-                        }`}
-                      >
-                        {m.status}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {staff.map((m) => {
+                  const protectedOwnerRow =
+                    !isOwner && (m.role === 'Owner' || m.role === 'Super Admin');
+                  return (
+                    <tr key={m.id} className="hover:bg-hover transition-colors">
+                      <td className="py-3 pl-5 pr-3">
+                        <p className="font-semibold text-ink">{m.name}</p>
+                        <p className="text-ink-muted">{m.email}</p>
+                      </td>
+                      <td className="py-3 px-3 font-medium text-ink-secondary">
+                        {m.role}
+                      </td>
+                      <td className="py-3 px-3 font-mono text-ink-muted">
+                        {m.lastLogin}
+                      </td>
+                      <td className="py-3 pl-3 pr-5 text-right">
+                        <button
+                          type="button"
+                          disabled={protectedOwnerRow}
+                          title={
+                            protectedOwnerRow
+                              ? 'Co-Founder cannot make changes over Owner access'
+                              : undefined
+                          }
+                          onClick={() => !protectedOwnerRow && onToggleStaffStatus(m.id)}
+                          className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold disabled:opacity-65 disabled:cursor-not-allowed ${
+                            m.status === 'Active'
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400'
+                              : 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400'
+                          }`}
+                        >
+                          {protectedOwnerRow && <Lock className="h-3 w-3 shrink-0" aria-hidden="true" />}
+                          <span>{m.status}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1168,6 +1225,7 @@ export function ApparelSettingsView({
   settings,
   themePreset,
   isDark,
+  currentAdminRole,
   onChangeThemePreset,
   onToggleDark,
   onSaveSettings,
@@ -1176,11 +1234,13 @@ export function ApparelSettingsView({
   settings: BusinessSettings;
   themePreset: ThemePreset;
   isDark: boolean;
+  currentAdminRole?: AdminRoleLabel | null;
   onChangeThemePreset: (preset: ThemePreset) => void;
   onToggleDark: () => void;
   onSaveSettings: (next: BusinessSettings) => void;
   onClearAllData: () => void;
 }) {
+  const isOwner = currentAdminRole === 'Owner';
   const [draft, setDraft] = useState(settings);
   const [confirmClear, setConfirmClear] = useState(false);
 
@@ -1365,10 +1425,17 @@ export function ApparelSettingsView({
             Reset Local Admin Data
           </h2>
           <p className="mt-0.5 text-xs text-ink-muted">
-            Clear locally stored orders, transactions, accounts, and catalog drafts in this browser.
+            {isOwner
+              ? 'Clear locally stored orders, transactions, accounts, and catalog drafts in this browser.'
+              : 'Only the Owner can reset locally stored admin data.'}
           </p>
         </div>
-        {!confirmClear ? (
+        {!isOwner ? (
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-subtle px-3.5 py-2 text-xs font-medium text-ink-muted self-start sm:self-auto whitespace-nowrap">
+            <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Owner Only</span>
+          </span>
+        ) : !confirmClear ? (
           <button
             type="button"
             onClick={() => setConfirmClear(true)}

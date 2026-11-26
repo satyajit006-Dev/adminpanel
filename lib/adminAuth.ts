@@ -31,6 +31,10 @@ export interface AdminSessionHistoryEntry {
 
 const inMemorySessionHistory: AdminSessionHistoryEntry[] = [];
 let lastSessionInsertError: string | null = null;
+let inMemoryCofounderRevokedAfterMs = 0;
+let cachedDbRevokedAfterMs = 0;
+let lastRevokeCacheCheckMs = 0;
+const REVOKE_CACHE_TTL_MS = 1_500;
 
 function parseDeviceLabel(rawUserAgent?: string): string {
   const ua = typeof rawUserAgent === 'string' ? rawUserAgent.trim() : '';
@@ -60,15 +64,18 @@ async function recordAdminSessionEvent(params: {
   role: AdminRoleLabel;
   eventType: 'login' | 'logout';
   userAgent?: string;
+  deviceInfoOverride?: string;
+  occurredAt?: string;
 }): Promise<AdminSessionHistoryEntry> {
-  const deviceInfo = parseDeviceLabel(params.userAgent);
+  const deviceInfo = params.deviceInfoOverride ?? parseDeviceLabel(params.userAgent);
+  const occurredAt = params.occurredAt ?? new Date().toISOString();
   const entry: AdminSessionHistoryEntry = {
     id: `AUTH-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
     username: params.username,
     role: params.role,
     eventType: params.eventType,
     deviceInfo,
-    occurredAt: new Date().toISOString(),
+    occurredAt,
   };
 
   inMemorySessionHistory.unshift(entry);
@@ -110,6 +117,42 @@ async function recordAdminSessionEvent(params: {
   }
 
   return entry;
+}
+
+async function getCofounderRevokedAfterMs(): Promise<number> {
+  const now = Date.now();
+  if (now - lastRevokeCacheCheckMs < REVOKE_CACHE_TTL_MS) {
+    return Math.max(inMemoryCofounderRevokedAfterMs, cachedDbRevokedAfterMs);
+  }
+
+  lastRevokeCacheCheckMs = now;
+  const supabase = getSupabaseAdmin();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('admin_session_history')
+        .select('occurred_at')
+        .eq('role', 'Co-Founder')
+        .eq('event_type', 'logout')
+        .eq('device_info', 'Logged out by Owner')
+        .order('occurred_at', { ascending: false })
+        .limit(1);
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const rawTs = data[0]?.occurred_at;
+        if (typeof rawTs === 'string') {
+          const parsed = Date.parse(rawTs);
+          if (Number.isFinite(parsed) && parsed > cachedDbRevokedAfterMs) {
+            cachedDbRevokedAfterMs = parsed;
+          }
+        }
+      }
+    } catch {
+      // Fallback safely to in-memory revocation watermark
+    }
+  }
+
+  return Math.max(inMemoryCofounderRevokedAfterMs, cachedDbRevokedAfterMs);
 }
 
 function roleLabelFromKey(key: AdminRoleKey): AdminRoleLabel {
@@ -415,6 +458,7 @@ function createSignedToken(
     username,
     role: roleLabel,
     iat: Math.floor(now / 1000),
+    iatMs: now,
     exp: Math.floor(expiresAtMs / 1000),
     nonce: crypto.randomBytes(8).toString('hex'),
   };
@@ -433,7 +477,7 @@ function createSignedToken(
 export function verifyAdminBearerToken(
   authorizationHeader: string | undefined
 ):
-  | { ok: true; username?: string; role?: AdminRoleLabel }
+  | { ok: true; username?: string; role?: AdminRoleLabel; iatMs?: number }
   | { ok: false; status: number; error: string } {
   if (!authorizationHeader || !authorizationHeader.startsWith('Bearer ')) {
     return { ok: false, status: 401, error: 'Admin authentication required' };
@@ -466,6 +510,8 @@ export function verifyAdminBearerToken(
       sub?: string;
       username?: string;
       role?: AdminRoleLabel;
+      iat?: number;
+      iatMs?: number;
       exp?: number;
     };
     if (
@@ -475,10 +521,39 @@ export function verifyAdminBearerToken(
     ) {
       return { ok: false, status: 401, error: 'Admin session expired. Sign in again.' };
     }
-    return { ok: true, username: parsed.username, role: parsed.role };
+    const iatMs =
+      typeof parsed.iatMs === 'number'
+        ? parsed.iatMs
+        : typeof parsed.iat === 'number'
+          ? parsed.iat * 1000
+          : 0;
+    return { ok: true, username: parsed.username, role: parsed.role, iatMs };
   } catch {
     return { ok: false, status: 401, error: 'Admin authentication required' };
   }
+}
+
+export async function verifyAdminSession(
+  authorizationHeader: string | undefined
+): Promise<
+  | { ok: true; username?: string; role?: AdminRoleLabel; iatMs?: number }
+  | { ok: false; status: number; error: string }
+> {
+  const auth = verifyAdminBearerToken(authorizationHeader);
+  if (!auth.ok) return auth;
+
+  if (auth.role === 'Co-Founder') {
+    const revokedAfterMs = await getCofounderRevokedAfterMs();
+    if (revokedAfterMs > 0 && (auth.iatMs ?? 0) <= revokedAfterMs) {
+      return {
+        ok: false,
+        status: 401,
+        error: 'Your Co-Founder session was logged out by the Owner.',
+      };
+    }
+  }
+
+  return auth;
 }
 
 export async function handleClaimAdminPasscode(
@@ -671,7 +746,7 @@ export async function handleAdminLogin(
 export async function handleGetAdminCredentials(
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -703,7 +778,7 @@ export async function handleSaveAdminCredential(
   body: Record<string, unknown> | null,
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -719,6 +794,16 @@ export async function handleSaveAdminCredential(
     return {
       status: 400,
       payload: { ok: false, error: 'Role must be "owner" or "co_founder".' },
+    };
+  }
+
+  if (auth.role !== 'Owner' && roleKey === 'owner') {
+    return {
+      status: 403,
+      payload: {
+        ok: false,
+        error: 'Co-Founder cannot make any changes over the Owner.',
+      },
     };
   }
 
@@ -804,7 +889,7 @@ export async function handleAdminLogout(
   authorizationHeader: string | undefined,
   userAgent?: string
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -827,10 +912,74 @@ export async function handleAdminLogout(
   };
 }
 
+export async function handleCheckSession(
+  authorizationHeader: string | undefined
+): Promise<{ status: number; payload: Record<string, unknown> }> {
+  const auth = await verifyAdminSession(authorizationHeader);
+  if (!auth.ok) {
+    return { status: auth.status, payload: { ok: false, error: auth.error } };
+  }
+
+  return {
+    status: 200,
+    payload: {
+      ok: true,
+      username: auth.username,
+      role: auth.role,
+    },
+  };
+}
+
+export async function handleRevokeCofounderSession(
+  authorizationHeader: string | undefined
+): Promise<{ status: number; payload: Record<string, unknown> }> {
+  const auth = await verifyAdminSession(authorizationHeader);
+  if (!auth.ok) {
+    return { status: auth.status, payload: { ok: false, error: auth.error } };
+  }
+
+  if (auth.role !== 'Owner') {
+    return {
+      status: 403,
+      payload: {
+        ok: false,
+        error: 'Co-Founder cannot make any changes over the Owner or force-logout sessions.',
+      },
+    };
+  }
+
+  const cofounderCred = await readDbCredential('co_founder');
+  const cofounderUsername = cofounderCred?.username || 'cofounder';
+  const revokedAtMs = Date.now();
+  const occurredAt = new Date(revokedAtMs).toISOString();
+
+  inMemoryCofounderRevokedAfterMs = Math.max(inMemoryCofounderRevokedAfterMs, revokedAtMs);
+  cachedDbRevokedAfterMs = Math.max(cachedDbRevokedAfterMs, revokedAtMs);
+  lastRevokeCacheCheckMs = revokedAtMs;
+
+  const historyEntry = await recordAdminSessionEvent({
+    username: cofounderUsername,
+    role: 'Co-Founder',
+    eventType: 'logout',
+    deviceInfoOverride: 'Logged out by Owner',
+    occurredAt,
+  });
+
+  return {
+    status: 200,
+    payload: {
+      ok: true,
+      revokedRole: 'Co-Founder',
+      username: cofounderUsername,
+      historyEntry,
+    },
+  };
+}
+
 export async function handleListSessionHistory(
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }

@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { verifyAdminBearerToken } from './adminAuth.js';
+import { verifyAdminSession } from './adminAuth.js';
 import {
   getCustomersTableName,
   getOrdersTableName,
@@ -152,7 +152,7 @@ export async function handleUploadProductImage(
   body: Record<string, unknown> | null,
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -231,7 +231,7 @@ export async function handleUploadProductImage(
 export async function handleListOrders(
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -282,7 +282,7 @@ export async function handleUpdateOrder(
   body: Record<string, unknown> | null,
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -347,7 +347,7 @@ export async function handleUpdateOrder(
 export async function handleListCustomers(
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -395,7 +395,7 @@ export async function handleUpsertCustomer(
   body: Record<string, unknown> | null,
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -471,7 +471,7 @@ export async function handleDeleteCustomer(
   id: string | undefined,
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -500,7 +500,7 @@ export async function handleDeleteCustomer(
 export async function handleListTransactions(
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -550,7 +550,7 @@ export async function handleUpdateTransaction(
   body: Record<string, unknown> | null,
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }

@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getAuthStatus, verifyAdminBearerToken } from './adminAuth.js';
+import { getAuthStatus, verifyAdminSession } from './adminAuth.js';
 import {
   getProductsTableName,
   getStorageBucketName,
@@ -276,7 +276,7 @@ export async function getWebsiteConfig() {
 export async function handleListWebsiteProducts(
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -334,7 +334,7 @@ export async function handleUpsertWebsiteProduct(
   body: Record<string, unknown> | null,
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }
@@ -522,7 +522,7 @@ export async function handleDeleteWebsiteProduct(
   params: { id?: string; sku?: string },
   authorizationHeader: string | undefined
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const auth = verifyAdminBearerToken(authorizationHeader);
+  const auth = await verifyAdminSession(authorizationHeader);
   if (!auth.ok) {
     return { status: auth.status, payload: { ok: false, error: auth.error } };
   }

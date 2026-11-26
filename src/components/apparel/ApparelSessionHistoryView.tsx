@@ -1,12 +1,13 @@
-import { History, Lock, LogIn, LogOut, RefreshCw } from 'lucide-react';
-import type { AdminSessionHistoryEntry } from '../../types/apparel';
+import { History, Lock, LogIn, LogOut } from 'lucide-react';
+import type { AdminRoleLabel, AdminSessionHistoryEntry } from '../../types/apparel';
 
 interface ApparelSessionHistoryViewProps {
   history: AdminSessionHistoryEntry[];
-  loading: boolean;
   tableMissing?: boolean;
   loadError?: string | null;
-  onRefresh: () => void;
+  currentAdminRole?: AdminRoleLabel | null;
+  revokingCofounder?: boolean;
+  onForceLogoutCofounder?: () => void;
 }
 
 function formatDatePart(iso: string): string {
@@ -32,11 +33,14 @@ function formatTimePart(iso: string): string {
 
 export function ApparelSessionHistoryView({
   history,
-  loading,
   tableMissing,
   loadError,
-  onRefresh,
+  currentAdminRole,
+  revokingCofounder = false,
+  onForceLogoutCofounder,
 }: ApparelSessionHistoryViewProps) {
+  const isOwner = currentAdminRole === 'Owner';
+
   return (
     <div className="space-y-4">
       {loadError && (
@@ -61,18 +65,17 @@ export function ApparelSessionHistoryView({
             </h2>
           </div>
 
-          <button
-            type="button"
-            disabled={loading}
-            onClick={onRefresh}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink disabled:opacity-50 transition-colors whitespace-nowrap shrink-0"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 shrink-0 ${loading ? 'animate-spin' : ''}`}
-              aria-hidden="true"
-            />
-            <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
-          </button>
+          {isOwner && onForceLogoutCofounder && (
+            <button
+              type="button"
+              disabled={revokingCofounder}
+              onClick={onForceLogoutCofounder}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50/70 dark:bg-red-950/20 px-3 py-1.5 text-xs font-semibold text-red-700 dark:text-red-400 hover:bg-red-100/80 dark:hover:bg-red-950/40 disabled:opacity-50 transition-colors whitespace-nowrap shrink-0"
+            >
+              <LogOut className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>{revokingCofounder ? 'Logging Out...' : 'Log Out Co-Founder'}</span>
+            </button>
+          )}
         </div>
 
         {history.length === 0 ? (

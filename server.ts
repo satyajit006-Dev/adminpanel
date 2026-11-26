@@ -6,9 +6,11 @@ import { fileURLToPath } from 'url';
 import {
   handleAdminLogin,
   handleAdminLogout,
+  handleCheckSession,
   handleClaimAdminPasscode,
   handleGetAdminCredentials,
   handleListSessionHistory,
+  handleRevokeCofounderSession,
   handleSaveAdminCredential,
 } from './lib/adminAuth.js';
 import {
@@ -68,6 +70,18 @@ async function startServer() {
     const userAgent =
       typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
     const result = await handleAdminLogout(req.headers.authorization, userAgent);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.get('/api/admin/auth/session', async (req, res) => {
+    const result = await handleCheckSession(req.headers.authorization);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/admin/auth/revoke-cofounder', async (req, res) => {
+    const result = await handleRevokeCofounderSession(req.headers.authorization);
     res.setHeader('Cache-Control', 'no-store');
     res.status(result.status).json(result.payload);
   });

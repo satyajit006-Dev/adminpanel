@@ -232,9 +232,9 @@ export default function App() {
   const [sessionHistory, setSessionHistory] = useState<AdminSessionHistoryEntry[]>(() =>
     loadImmutableSessionHistory()
   );
-  const [sessionHistoryLoading, setSessionHistoryLoading] = useState(false);
   const [sessionHistoryTableMissing, setSessionHistoryTableMissing] = useState(false);
   const [sessionHistoryError, setSessionHistoryError] = useState<string | null>(null);
+  const [revokingCofounder, setRevokingCofounder] = useState(false);
   const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
   const [backendConfig, setBackendConfig] = useState<BackendWebsiteConfig>({
     checked: false,
@@ -317,12 +317,27 @@ export default function App() {
     }
   }, [sessionHistory]);
 
+  const clearEndedSession = useCallback(
+    (message?: string) => {
+      setAdminToken(null);
+      setAdminUsername(null);
+      setAdminRole(null);
+      setMobileOpen(false);
+      setSelectedOrderId(null);
+      setSelectedTxId(null);
+      setSelectedAccountId(null);
+      if (message) notify(message);
+    },
+    [notify]
+  );
+
   const fetchSessionHistory = useCallback(
-    async (tokenOverride?: string) => {
+    async (tokenOverride?: string, silent = false) => {
       const activeToken = tokenOverride ?? adminToken;
       if (!activeToken) return;
-      setSessionHistoryLoading(true);
-      setSessionHistoryError(null);
+      if (!silent) {
+        setSessionHistoryError(null);
+      }
       try {
         const res = await fetch('/api/admin/session-history', {
           headers: { Authorization: `Bearer ${activeToken}` },
@@ -342,39 +357,92 @@ export default function App() {
           history?: AdminSessionHistoryEntry[];
         };
         if (res.status === 401) {
-          setAdminToken(null);
+          clearEndedSession(data.error ?? 'Session ended. Please sign in again.');
           return;
         }
         if (!res.ok || !data.ok) {
           setSessionHistoryError(data.error ?? `Failed to load history (HTTP ${res.status}).`);
           return;
         }
-        if (data.dbError) {
-          setSessionHistoryError(data.dbError);
-        }
+        setSessionHistoryError(data.dbError ?? null);
         if (Array.isArray(data.history)) {
           setSessionHistoryTableMissing(Boolean(data.tableMissing));
           setSessionHistory((prev) => mergeSessionHistory(prev, data.history ?? []));
         }
       } catch (err) {
-        setSessionHistoryError(
-          err instanceof Error ? err.message : 'Unable to fetch login & logout history.'
-        );
-      } finally {
-        setSessionHistoryLoading(false);
+        if (!silent) {
+          setSessionHistoryError(
+            err instanceof Error ? err.message : 'Unable to fetch login & logout history.'
+          );
+        }
       }
     },
-    [adminToken]
+    [adminToken, clearEndedSession]
   );
 
   useEffect(() => {
     if (!adminToken || activeRoute !== 'session_history') return;
-    void fetchSessionHistory(adminToken);
+    void fetchSessionHistory(adminToken, false);
     const intervalId = window.setInterval(() => {
-      void fetchSessionHistory(adminToken);
-    }, 15_000);
+      void fetchSessionHistory(adminToken, true);
+    }, 3_000);
     return () => window.clearInterval(intervalId);
   }, [adminToken, activeRoute, fetchSessionHistory]);
+
+  useEffect(() => {
+    if (!adminToken || adminRole !== 'Co-Founder' || activeRoute === 'session_history') return;
+    const intervalId = window.setInterval(async () => {
+      try {
+        const res = await fetch('/api/admin/auth/session', {
+          headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        if (res.status === 401) {
+          const data = (await res.json().catch(() => ({}))) as { error?: string };
+          clearEndedSession(data.error ?? 'Your Co-Founder session was logged out by the Owner.');
+        }
+      } catch {
+        // Ignore transient network errors during background session check
+      }
+    }, 3_000);
+    return () => window.clearInterval(intervalId);
+  }, [adminToken, adminRole, activeRoute, clearEndedSession]);
+
+  const handleForceLogoutCofounder = useCallback(async () => {
+    if (!adminToken || adminRole !== 'Owner') {
+      notify('Only the Owner can log out the Co-Founder.');
+      return;
+    }
+    setRevokingCofounder(true);
+    try {
+      const res = await fetch('/api/admin/auth/revoke-cofounder', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+        username?: string;
+        historyEntry?: AdminSessionHistoryEntry;
+      };
+      if (res.status === 401) {
+        clearEndedSession(data.error ?? 'Session expired. Please sign in again.');
+        return;
+      }
+      if (!res.ok || !data.ok) {
+        notify(data.error ?? `Failed to log out Co-Founder (HTTP ${res.status}).`);
+        return;
+      }
+      if (data.historyEntry) {
+        setSessionHistory((prev) => mergeSessionHistory(prev, [data.historyEntry!]));
+      }
+      void fetchSessionHistory(adminToken, true);
+      notify(`Logged out Co-Founder (${data.username || 'cofounder'}) across all devices.`);
+    } catch {
+      notify('Network error logging out Co-Founder.');
+    } finally {
+      setRevokingCofounder(false);
+    }
+  }, [adminToken, adminRole, clearEndedSession, fetchSessionHistory, notify]);
 
   const pullProductsFromSupabase = useCallback(
     async (tokenOverride?: string) => {
@@ -1037,6 +1105,10 @@ export default function App() {
   };
 
   const handleClearAllData = () => {
+    if (adminRole !== 'Owner') {
+      notify('Only the Owner can reset local admin data.');
+      return;
+    }
     setAccounts(INITIAL_ACCOUNTS);
     setOrders(INITIAL_ORDERS);
     setTransactions(INITIAL_TRANSACTIONS);
@@ -1417,9 +1489,21 @@ export default function App() {
             <ApparelStaffView
               staff={staff}
               adminToken={adminToken}
+              currentAdminRole={adminRole}
+              revokingCofounder={revokingCofounder}
+              onForceLogoutCofounder={handleForceLogoutCofounder}
               onRefreshConfig={refreshBackendConfig}
               onNotify={notify}
               onToggleStaffStatus={(id) => {
+                const target = staff.find((s) => s.id === id);
+                if (
+                  adminRole !== 'Owner' &&
+                  target &&
+                  (target.role === 'Owner' || target.role === 'Super Admin')
+                ) {
+                  notify('Co-Founder cannot make changes over the Owner.');
+                  return;
+                }
                 setStaff((prev) =>
                   prev.map((s) =>
                     s.id === id
@@ -1430,6 +1514,13 @@ export default function App() {
                 notify('Updated staff access status');
               }}
               onAddStaff={(member) => {
+                if (
+                  adminRole !== 'Owner' &&
+                  (member.role === 'Owner' || member.role === 'Super Admin')
+                ) {
+                  notify('Co-Founder cannot add Owner-level roles.');
+                  return;
+                }
                 setStaff((prev) => [...prev, member]);
                 notify(`Added staff member ${member.name}`);
               }}
@@ -1439,10 +1530,11 @@ export default function App() {
           {activeRoute === 'session_history' && (
             <ApparelSessionHistoryView
               history={sessionHistory}
-              loading={sessionHistoryLoading}
               tableMissing={sessionHistoryTableMissing}
               loadError={sessionHistoryError}
-              onRefresh={() => void fetchSessionHistory()}
+              currentAdminRole={adminRole}
+              revokingCofounder={revokingCofounder}
+              onForceLogoutCofounder={handleForceLogoutCofounder}
             />
           )}
 
@@ -1451,6 +1543,7 @@ export default function App() {
               settings={settings}
               themePreset={themePreset}
               isDark={isDark}
+              currentAdminRole={adminRole}
               onChangeThemePreset={(next) => {
                 setThemePreset(next);
                 notify(
