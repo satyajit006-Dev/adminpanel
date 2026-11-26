@@ -2,25 +2,39 @@ import {
   Check,
   Code2,
   Copy,
+  Database,
   Globe,
   ImagePlus,
+  KeyRound,
   Link2,
+  Lock,
   Pencil,
   RefreshCw,
   Send,
+  ShieldCheck,
   Shirt,
   Trash2,
   UploadCloud,
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ApparelCategory, ApparelProduct } from '../../types/apparel';
+import type {
+  ApparelCategory,
+  ApparelProduct,
+  BackendWebsiteConfig,
+} from '../../types/apparel';
 import { formatDateTime, formatInr } from '../../utils/apparelFormatters';
 
 interface ApparelWebsiteUploadViewProps {
   products: ApparelProduct[];
   categories: ApparelCategory[];
   editingProductId: string | null;
+  adminToken: string | null;
+  backendConfig: BackendWebsiteConfig;
+  isSyncingCatalog: boolean;
+  onAdminTokenChange: (token: string | null) => void;
+  onRefreshConfig: () => Promise<void>;
+  onPullFromSupabase: (tokenOverride?: string) => Promise<void>;
   onSelectEditProduct: (id: string | null) => void;
   onSaveProduct: (product: ApparelProduct) => void;
   onDeleteProduct: (id: string) => void;
@@ -107,6 +121,12 @@ export function ApparelWebsiteUploadView({
   products,
   categories,
   editingProductId,
+  adminToken,
+  backendConfig,
+  isSyncingCatalog,
+  onAdminTokenChange,
+  onRefreshConfig,
+  onPullFromSupabase,
   onSelectEditProduct,
   onSaveProduct,
   onDeleteProduct,
@@ -142,7 +162,7 @@ export function ApparelWebsiteUploadView({
   const [isDragging, setIsDragging] = useState(false);
   const [failedPreviewImages, setFailedPreviewImages] = useState<Record<string, boolean>>({});
 
-  // Backend integration state
+  // Backend integration & admin unlock state
   const [syncMode, setSyncMode] = useState<'proxy' | 'direct'>(() => {
     try {
       const saved = localStorage.getItem('apparel_website_sync_mode');
@@ -158,21 +178,14 @@ export function ApparelWebsiteUploadView({
       return '';
     }
   });
-  const [serverConfig, setServerConfig] = useState<{
-    checked: boolean;
-    serverConfigured: boolean;
-    targetOrigin: string | null;
-    authConfigured: boolean;
-  }>({
-    checked: false,
-    serverConfigured: false,
-    targetOrigin: null,
-    authConfigured: false,
-  });
+  const [passcodeInput, setPasscodeInput] = useState('');
+  const [confirmPasscodeInput, setConfirmPasscodeInput] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [showCodeGuide, setShowCodeGuide] = useState(false);
-  const [copiedKey, setCopiedKey] = useState<'json' | 'express' | 'react' | null>(null);
+  const [copiedKey, setCopiedKey] = useState<'json' | 'sql' | 'react' | null>(null);
 
   useEffect(() => {
     try {
@@ -184,44 +197,8 @@ export function ApparelWebsiteUploadView({
   }, [syncMode, directEndpointUrl]);
 
   useEffect(() => {
-    let cancelled = false;
-    fetch('/api/website/config')
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Config endpoint unavailable');
-        const contentType = res.headers.get('content-type') ?? '';
-        if (!contentType.includes('application/json')) {
-          throw new Error('Static hosting mode');
-        }
-        return res.json() as Promise<{
-          serverConfigured: boolean;
-          targetOrigin: string | null;
-          authConfigured: boolean;
-        }>;
-      })
-      .then((data) => {
-        if (!cancelled) {
-          setServerConfig({
-            checked: true,
-            serverConfigured: Boolean(data.serverConfigured),
-            targetOrigin: data.targetOrigin ?? null,
-            authConfigured: Boolean(data.authConfigured),
-          });
-        }
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setServerConfig({
-            checked: true,
-            serverConfigured: false,
-            targetOrigin: null,
-            authConfigured: false,
-          });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void onRefreshConfig();
+  }, [onRefreshConfig]);
 
   // Load selected product for editing or reset to blank
   useEffect(() => {
@@ -403,6 +380,68 @@ export function ApparelWebsiteUploadView({
     ]
   );
 
+  const handleAdminAuthenticate = async () => {
+    setAuthError(null);
+    const cleaned = passcodeInput.trim();
+    if (!cleaned) {
+      setAuthError('Enter your admin passcode.');
+      return;
+    }
+
+    const isClaimFlow = !backendConfig.authClaimed && !backendConfig.usingEnvPasscode;
+    if (isClaimFlow) {
+      if (cleaned.length < 8) {
+        setAuthError('First-run admin passcode must be at least 8 characters.');
+        return;
+      }
+      if (cleaned !== confirmPasscodeInput.trim()) {
+        setAuthError('Passcodes do not match.');
+        return;
+      }
+    }
+
+    setAuthSubmitting(true);
+    try {
+      const endpoint = isClaimFlow ? '/api/admin/auth/claim' : '/api/admin/auth/login';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: cleaned }),
+      });
+      const contentType = res.headers.get('content-type') ?? '';
+      if (!contentType.includes('application/json')) {
+        setAuthError(`Auth API unavailable (HTTP ${res.status}).`);
+        return;
+      }
+      const data = (await res.json()) as {
+        ok?: boolean;
+        token?: string;
+        error?: string;
+        needsSetup?: boolean;
+      };
+      if (!res.ok || !data.ok || !data.token) {
+        setAuthError(data.error ?? `Authentication failed (HTTP ${res.status}).`);
+        if (data.needsSetup) {
+          await onRefreshConfig();
+        }
+        return;
+      }
+
+      setPasscodeInput('');
+      setConfirmPasscodeInput('');
+      onAdminTokenChange(data.token);
+      onNotify(
+        isClaimFlow
+          ? 'Admin passcode claimed and Supabase session unlocked.'
+          : 'Admin session unlocked.'
+      );
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Failed to reach authentication API.');
+    } finally {
+      setAuthSubmitting(false);
+    }
+  };
+
   const pushProductToBackend = async (product: ApparelProduct): Promise<ApparelProduct> => {
     const nowIso = new Date().toISOString();
 
@@ -453,47 +492,70 @@ export function ApparelWebsiteUploadView({
       }
     }
 
-    // Server proxy mode (/api/website/products)
+    // Server Supabase proxy mode (/api/website/products)
+    if (!adminToken) {
+      return {
+        ...product,
+        websiteSyncStatus: 'failed',
+        lastSyncedAt: nowIso,
+        syncError: 'Unlock the admin backend session on the right before syncing to Supabase.',
+      };
+    }
+
     try {
       const res = await fetch('/api/website/products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${adminToken}`,
+        },
         body: JSON.stringify(product),
       });
       const contentType = res.headers.get('content-type') ?? '';
       if (!contentType.includes('application/json')) {
         return {
           ...product,
-          websiteSyncStatus: 'local_only',
+          websiteSyncStatus: 'failed',
           lastSyncedAt: nowIso,
-          syncError: undefined,
+          syncError: `API returned HTTP ${res.status} (${contentType || 'non-JSON'}). Ensure /api/website/products is deployed.`,
         };
       }
       const data = (await res.json()) as {
         ok?: boolean;
         mode?: 'proxied' | 'local';
+        product?: ApparelProduct;
         error?: string;
       };
+      if (res.status === 401) {
+        onAdminTokenChange(null);
+        return {
+          ...product,
+          websiteSyncStatus: 'failed',
+          lastSyncedAt: nowIso,
+          syncError: data.error ?? 'Admin authentication required. Please unlock again.',
+        };
+      }
       if (!res.ok || !data.ok) {
         return {
           ...product,
           websiteSyncStatus: 'failed',
           lastSyncedAt: nowIso,
-          syncError: data.error ?? `Server proxy returned HTTP ${res.status}`,
+          syncError: data.error ?? `Supabase backend returned HTTP ${res.status}`,
         };
       }
+      const returnedProduct = data.product ?? product;
       return {
-        ...product,
-        websiteSyncStatus: data.mode === 'proxied' ? 'synced' : 'local_only',
-        lastSyncedAt: nowIso,
+        ...returnedProduct,
+        websiteSyncStatus: 'synced',
+        lastSyncedAt: returnedProduct.lastSyncedAt ?? nowIso,
         syncError: undefined,
       };
-    } catch {
+    } catch (err) {
       return {
         ...product,
-        websiteSyncStatus: 'local_only',
+        websiteSyncStatus: 'failed',
         lastSyncedAt: nowIso,
-        syncError: undefined,
+        syncError: err instanceof Error ? err.message : 'Network error reaching /api/website/products.',
       };
     }
   };
@@ -511,13 +573,11 @@ export function ApparelWebsiteUploadView({
       onSaveProduct(synced);
 
       if (synced.websiteSyncStatus === 'synced') {
-        onNotify(`Published ${synced.name} (${synced.sku}) to your website backend.`);
+        onNotify(`Saved ${synced.name} (${synced.sku}) to Supabase.`);
       } else if (synced.websiteSyncStatus === 'failed') {
-        onNotify(`Saved locally, but backend sync failed: ${synced.syncError}`);
+        onNotify(`Saved locally, but Supabase sync failed: ${synced.syncError}`);
       } else {
-        onNotify(
-          `Saved ${synced.name} (${synced.sku}) to catalog. Connect your backend endpoint to push live.`
-        );
+        onNotify(`Saved ${synced.name} (${synced.sku}) to local catalog.`);
       }
 
       if (!editingProductId) {
@@ -534,18 +594,18 @@ export function ApparelWebsiteUploadView({
       const updated = await pushProductToBackend(prod);
       onSaveProduct(updated);
       if (updated.websiteSyncStatus === 'synced') {
-        onNotify(`Synced ${updated.sku} with your website backend.`);
+        onNotify(`Synced ${updated.sku} to Supabase.`);
       } else if (updated.websiteSyncStatus === 'failed') {
         onNotify(`Sync failed for ${updated.sku}: ${updated.syncError}`);
       } else {
-        onNotify(`Updated ${updated.sku} locally (no remote API URL configured yet).`);
+        onNotify(`Updated ${updated.sku} locally.`);
       }
     } finally {
       setSyncingId(null);
     }
   };
 
-  const handleCopy = async (kind: 'json' | 'express' | 'react', text: string) => {
+  const handleCopy = async (kind: 'json' | 'sql' | 'react', text: string) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedKey(kind);
@@ -562,20 +622,44 @@ export function ApparelWebsiteUploadView({
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const expressSnippet = `// Example Express route in your website backend
-app.post('/api/products', async (req, res) => {
-  const { sku, name, slug, categoryName, price, compareAtPrice, fabric, sizesAvailable, colors, stockQuantity, description, images, publishedToWebsite } = req.body;
-  const saved = await db.products.upsert({
-    where: { sku },
-    update: { name, slug, categoryName, price, compareAtPrice, fabric, sizesAvailable, colors, stockQuantity, description, images, publishedToWebsite },
-    create: { sku, name, slug, categoryName, price, compareAtPrice, fabric, sizesAvailable, colors, stockQuantity, description, images, publishedToWebsite },
-  });
-  res.status(201).json({ ok: true, product: saved });
-});`;
+  const supabaseSqlSnippet = `-- Run in Supabase SQL Editor (shared DB)
+create table if not exists public.products (
+  id text primary key,
+  sku text unique not null,
+  name text not null,
+  slug text,
+  category_id text not null default 'cat-1',
+  category_name text not null default 'Apparel',
+  price numeric(12, 2) not null default 0,
+  compare_at_price numeric(12, 2),
+  fabric text not null default '',
+  care_instructions text,
+  sizes_available text not null default 'XS–XL',
+  colors text[] not null default '{}',
+  stock_quantity integer not null default 0,
+  low_stock_threshold integer not null default 6,
+  is_available boolean not null default true,
+  is_bestseller boolean not null default false,
+  published_to_website boolean not null default true,
+  description text not null default '',
+  images text[] not null default '{}',
+  tags text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table public.products enable row level security;
+create policy "Public can view published products"
+  on public.products for select to anon, authenticated
+  using (published_to_website = true and is_available = true);`;
 
-  const reactSnippet = `// Fetch published products in your React website
-const res = await fetch('/api/products?published=true');
-const products = await res.json();`;
+  const reactSnippet = `// Fetch published products in your React Customer Website
+import { createClient } from '@supabase/supabase-js';
+const supabase = createClient(VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY);
+const { data: products } = await supabase
+  .from('${backendConfig.tableName}')
+  .select('*')
+  .eq('published_to_website', true)
+  .order('updated_at', { ascending: false });`;
 
   const publishedCount = products.filter((p) => p.publishedToWebsite ?? p.isAvailable).length;
   const syncedCount = products.filter((p) => p.websiteSyncStatus === 'synced').length;
@@ -634,17 +718,18 @@ const products = await res.json();`;
         </div>
       </div>
 
-      {/* Collapsible Backend Integration Spec */}
+      {/* Collapsible Supabase & Storefront Integration Spec */}
       {showCodeGuide && (
         <div className="rounded-xl border border-line bg-surface p-5 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-line-subtle pb-3">
             <div>
               <h2 className="font-display text-sm font-semibold text-ink">
-                Connect Your React Website &amp; Backend Database
+                Shared Supabase Database Setup &amp; Storefront Query
               </h2>
               <p className="mt-0.5 text-xs text-ink-muted">
-                Set <code className="font-mono text-ink">WEBSITE_API_URL</code> and{' '}
-                <code className="font-mono text-ink">WEBSITE_API_KEY</code> in your server environment variables, or test with a direct backend URL below.
+                Set <code className="font-mono text-ink">SUPABASE_URL</code>,{' '}
+                <code className="font-mono text-ink">SUPABASE_SERVICE_ROLE_KEY</code>, and{' '}
+                <code className="font-mono text-ink">ADMIN_PASSCODE</code> on the server (Vercel / .env). Never expose the service-role key in frontend code.
               </p>
             </div>
             <button
@@ -665,25 +750,25 @@ const products = await res.json();`;
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-ink-secondary">
-                  1. Backend Endpoint Example (Node / Express)
+                  1. Supabase Table &amp; RLS SQL (supabase/schema.sql)
                 </span>
                 <button
                   type="button"
-                  onClick={() => handleCopy('express', expressSnippet)}
+                  onClick={() => handleCopy('sql', supabaseSqlSnippet)}
                   className="text-xs font-medium text-accent-text hover:underline"
                 >
-                  {copiedKey === 'express' ? 'Copied' : 'Copy'}
+                  {copiedKey === 'sql' ? 'Copied' : 'Copy SQL'}
                 </button>
               </div>
-              <pre className="overflow-x-auto rounded-lg border border-line bg-subtle p-3 font-mono text-[11px] leading-relaxed text-ink-secondary">
-                {expressSnippet}
+              <pre className="max-h-56 overflow-auto rounded-lg border border-line bg-subtle p-3 font-mono text-[11px] leading-relaxed text-ink-secondary">
+                {supabaseSqlSnippet}
               </pre>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-ink-secondary">
-                  2. React Website Fetch + Live Payload Preview
+                  2. Customer Website Query + Live Payload Preview
                 </span>
                 <button
                   type="button"
@@ -1234,20 +1319,34 @@ const products = await res.json();`;
             </div>
           </section>
 
-          {/* Backend Target & Publish Action */}
+          {/* Backend Target, Admin Auth & Publish Action */}
           <section className="rounded-xl border border-line bg-surface p-5 space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-accent-text" aria-hidden="true" />
+                <Database className="h-4 w-4 text-accent-text" aria-hidden="true" />
                 <h2 className="font-display text-sm font-semibold text-ink">
-                  Website Backend Sync
+                  Supabase Backend Sync
                 </h2>
               </div>
-              <span className="font-mono text-[11px] text-ink-muted">
+              <span
+                className={`font-mono text-[11px] ${
+                  syncMode === 'proxy'
+                    ? backendConfig.supabaseConfigured
+                      ? adminToken
+                        ? 'text-emerald-700 dark:text-emerald-400 font-semibold'
+                        : 'text-amber-700 dark:text-amber-400 font-medium'
+                      : 'text-ink-muted'
+                    : directEndpointUrl
+                      ? 'text-ink-secondary'
+                      : 'text-ink-muted'
+                }`}
+              >
                 {syncMode === 'proxy'
-                  ? serverConfig.serverConfigured
-                    ? 'Server Proxy Ready'
-                    : 'Local Catalog Mode'
+                  ? backendConfig.supabaseConfigured
+                    ? adminToken
+                      ? 'Supabase Unlocked'
+                      : 'Auth Required'
+                    : 'Env Vars Needed'
                   : directEndpointUrl
                     ? 'Direct REST Endpoint'
                     : 'No Endpoint Set'}
@@ -1270,7 +1369,7 @@ const products = await res.json();`;
                     : 'text-ink-secondary hover:text-ink'
                 }`}
               >
-                Server Proxy (/api)
+                Supabase (/api)
               </button>
               <button
                 type="button"
@@ -1288,30 +1387,142 @@ const products = await res.json();`;
             </div>
 
             {syncMode === 'proxy' ? (
-              <div className="rounded-lg border border-line-subtle bg-subtle/50 p-3 text-xs space-y-1">
-                {serverConfig.serverConfigured ? (
-                  <>
-                    <p className="font-medium text-emerald-700 dark:text-emerald-400">
-                      Connected via server proxy to {serverConfig.targetOrigin}
+              <div className="space-y-3">
+                <div className="rounded-lg border border-line-subtle bg-subtle/50 p-3 text-xs space-y-1">
+                  {backendConfig.supabaseConfigured ? (
+                    <>
+                      <p className="font-medium text-emerald-700 dark:text-emerald-400">
+                        Connected to Supabase ({backendConfig.targetOrigin})
+                      </p>
+                      <p className="text-ink-muted">
+                        Table: <code className="font-mono text-ink">{backendConfig.tableName}</code>
+                        {backendConfig.storageBucketConfigured
+                          ? ' · Storage bucket active'
+                          : ' · Inline/URL images'}
+                        {backendConfig.webhookConfigured ? ' · Webhook notify active' : ''}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium text-ink">
+                        Configure Supabase Environment Variables
+                      </p>
+                      <p className="text-ink-muted">
+                        Set <code className="font-mono text-ink">SUPABASE_URL</code> and{' '}
+                        <code className="font-mono text-ink">SUPABASE_SERVICE_ROLE_KEY</code> in
+                        your server environment variables (and run{' '}
+                        <code className="font-mono text-ink">supabase/schema.sql</code>).
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                {/* Admin Session Unlock / First-Run Passcode Setup */}
+                {!adminToken ? (
+                  <div className="rounded-lg border border-line bg-subtle/40 p-3.5 space-y-2.5">
+                    <div className="flex items-center gap-2">
+                      <KeyRound className="h-3.5 w-3.5 text-accent-text shrink-0" aria-hidden="true" />
+                      <span className="text-xs font-semibold text-ink">
+                        {!backendConfig.authClaimed && !backendConfig.usingEnvPasscode
+                          ? 'Set Admin Backend Passcode (First-Run Setup)'
+                          : 'Unlock Supabase Admin Session'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-ink-muted">
+                      {!backendConfig.authClaimed && !backendConfig.usingEnvPasscode
+                        ? 'Create your admin passcode (min 8 chars) to protect Supabase product sync, or set ADMIN_PASSCODE in server secrets.'
+                        : 'Enter your admin passcode to read, publish, update, and delete products in Supabase.'}
                     </p>
-                    <p className="text-ink-muted">
-                      {serverConfig.authConfigured
-                        ? 'Server authorization header is active via WEBSITE_API_KEY.'
-                        : 'Set WEBSITE_API_KEY in server environment variables if your backend requires auth.'}
-                    </p>
-                  </>
+
+                    <div className="space-y-2">
+                      <input
+                        type="password"
+                        value={passcodeInput}
+                        onChange={(e) => setPasscodeInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            void handleAdminAuthenticate();
+                          }
+                        }}
+                        placeholder={
+                          !backendConfig.authClaimed && !backendConfig.usingEnvPasscode
+                            ? 'Choose admin passcode (min 8 chars)'
+                            : 'Enter admin passcode'
+                        }
+                        aria-label="Admin passcode"
+                        className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+                      />
+                      {!backendConfig.authClaimed && !backendConfig.usingEnvPasscode && (
+                        <input
+                          type="password"
+                          value={confirmPasscodeInput}
+                          onChange={(e) => setConfirmPasscodeInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              void handleAdminAuthenticate();
+                            }
+                          }}
+                          placeholder="Confirm admin passcode"
+                          aria-label="Confirm admin passcode"
+                          className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+                        />
+                      )}
+                      {authError && (
+                        <p className="text-[11px] font-medium text-red-700 dark:text-red-400">
+                          {authError}
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        disabled={authSubmitting}
+                        onClick={() => void handleAdminAuthenticate()}
+                        className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink hover:bg-hover disabled:opacity-60 transition-colors"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span>
+                          {authSubmitting
+                            ? 'Verifying...'
+                            : !backendConfig.authClaimed && !backendConfig.usingEnvPasscode
+                              ? 'Save Passcode & Unlock'
+                              : 'Unlock Backend'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                 ) : (
-                  <>
-                    <p className="font-medium text-ink">
-                      Ready to connect via <code className="font-mono">WEBSITE_API_URL</code>
-                    </p>
-                    <p className="text-ink-muted">
-                      Products save to the admin catalog immediately. Set{' '}
-                      <code className="font-mono text-ink">WEBSITE_API_URL</code> (and{' '}
-                      <code className="font-mono text-ink">WEBSITE_API_KEY</code> if needed) in your
-                      environment variables to forward uploads automatically to your database.
-                    </p>
-                  </>
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-emerald-200/70 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20 px-3 py-2 text-xs">
+                    <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+                      <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Admin session active</span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isSyncingCatalog || !backendConfig.supabaseConfigured}
+                        onClick={() => void onPullFromSupabase()}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-secondary hover:text-ink disabled:opacity-50"
+                      >
+                        <RefreshCw
+                          className={`h-3 w-3 ${isSyncingCatalog ? 'animate-spin' : ''}`}
+                          aria-hidden="true"
+                        />
+                        <span>Pull</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onAdminTokenChange(null);
+                          onNotify('Admin backend session locked');
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-muted hover:text-ink"
+                      >
+                        <Lock className="h-3 w-3" aria-hidden="true" />
+                        <span>Lock</span>
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             ) : (
@@ -1327,8 +1538,7 @@ const products = await res.json();`;
                   className="w-full rounded-lg border border-line bg-surface px-3 py-2 font-mono text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
                 />
                 <p className="text-[11px] text-ink-muted">
-                  For endpoints requiring secret API keys, use Server Proxy mode and store credentials in{' '}
-                  <code className="font-mono">WEBSITE_API_KEY</code> on the server.
+                  Use Supabase (/api) mode above for server-side database writes without exposing service-role credentials.
                 </p>
               </div>
             )}
@@ -1342,10 +1552,10 @@ const products = await res.json();`;
                 <Send className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 <span>
                   {isSubmitting
-                    ? 'Uploading...'
+                    ? 'Syncing...'
                     : editingProductId
-                      ? 'Update & Sync Product'
-                      : 'Upload to Website'}
+                      ? 'Update & Sync to Supabase'
+                      : 'Upload to Supabase'}
                 </span>
               </button>
               <button
@@ -1368,12 +1578,28 @@ const products = await res.json();`;
               Website Catalog &amp; Sync Status
             </h2>
             <p className="mt-0.5 text-xs text-ink-muted">
-              Click Edit to update photos or details, or Re-sync to push an item to your backend API.
+              Click Edit to update photos or details, or Sync to push an item directly to Supabase.
             </p>
           </div>
-          <span className="font-mono text-xs text-ink-muted tabular-nums">
-            {products.length} total SKUs
-          </span>
+          <div className="flex items-center gap-3">
+            {adminToken && backendConfig.supabaseConfigured && (
+              <button
+                type="button"
+                disabled={isSyncingCatalog}
+                onClick={() => void onPullFromSupabase()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                <RefreshCw
+                  className={`h-3 w-3 ${isSyncingCatalog ? 'animate-spin' : ''}`}
+                  aria-hidden="true"
+                />
+                <span>{isSyncingCatalog ? 'Loading...' : 'Refresh from Supabase'}</span>
+              </button>
+            )}
+            <span className="font-mono text-xs text-ink-muted tabular-nums">
+              {products.length} total SKUs
+            </span>
+          </div>
         </div>
 
         {products.length === 0 ? (

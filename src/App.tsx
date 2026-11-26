@@ -54,6 +54,7 @@ import type {
   ApparelOrder,
   ApparelProduct,
   ApparelRoute,
+  BackendWebsiteConfig,
   BusinessSettings,
   CashCollectionRecord,
   LiveNotification,
@@ -191,11 +192,143 @@ export default function App() {
   } | null>(null);
 
   const [notifications, setNotifications] = useState<LiveNotification[]>([]);
+  // Admin session Bearer token is held strictly in JS/React memory (never localStorage/sessionStorage)
+  const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
+  const [backendConfig, setBackendConfig] = useState<BackendWebsiteConfig>({
+    checked: false,
+    serverConfigured: false,
+    supabaseConfigured: false,
+    tableName: 'products',
+    storageBucketConfigured: false,
+    targetOrigin: null,
+    webhookOrigin: null,
+    webhookConfigured: false,
+    authConfigured: false,
+    authRequired: true,
+    authClaimed: false,
+    usingEnvPasscode: false,
+  });
 
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const notify = useCallback((message: string) => {
     setToast({ id: String(Date.now()), message });
   }, []);
+
+  const refreshBackendConfig = useCallback(async () => {
+    try {
+      const res = await fetch('/api/website/config');
+      const contentType = res.headers.get('content-type') ?? '';
+      if (!res.ok || !contentType.includes('application/json')) {
+        throw new Error('Config endpoint unavailable');
+      }
+      const data = (await res.json()) as Partial<BackendWebsiteConfig>;
+      setBackendConfig({
+        checked: true,
+        serverConfigured: Boolean(data.serverConfigured),
+        supabaseConfigured: Boolean(data.supabaseConfigured),
+        tableName: typeof data.tableName === 'string' && data.tableName ? data.tableName : 'products',
+        storageBucketConfigured: Boolean(data.storageBucketConfigured),
+        targetOrigin: data.targetOrigin ?? null,
+        webhookOrigin: data.webhookOrigin ?? null,
+        webhookConfigured: Boolean(data.webhookConfigured),
+        authConfigured: Boolean(data.authConfigured),
+        authRequired: data.authRequired !== false,
+        authClaimed: Boolean(data.authClaimed),
+        usingEnvPasscode: Boolean(data.usingEnvPasscode),
+      });
+    } catch {
+      setBackendConfig((prev) => ({
+        ...prev,
+        checked: true,
+        serverConfigured: false,
+        supabaseConfigured: false,
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshBackendConfig();
+  }, [refreshBackendConfig]);
+
+  const pullProductsFromSupabase = useCallback(
+    async (tokenOverride?: string) => {
+      const activeToken = tokenOverride ?? adminToken;
+      if (!activeToken) return;
+
+      setIsSyncingCatalog(true);
+      try {
+        const res = await fetch('/api/website/products', {
+          headers: { Authorization: `Bearer ${activeToken}` },
+        });
+        const contentType = res.headers.get('content-type') ?? '';
+        if (!contentType.includes('application/json')) {
+          notify('Supabase API route is unavailable on this host.');
+          return;
+        }
+        const data = (await res.json()) as {
+          ok?: boolean;
+          products?: ApparelProduct[];
+          error?: string;
+        };
+        if (res.status === 401) {
+          setAdminToken(null);
+          notify(data.error ?? 'Admin authentication required.');
+          return;
+        }
+        if (!res.ok || !data.ok) {
+          if (res.status !== 503) {
+            notify(data.error ?? 'Failed to load products from Supabase.');
+          }
+          return;
+        }
+
+        const remoteProducts = Array.isArray(data.products) ? data.products : [];
+        setProducts((prev) => {
+          const remoteSkus = new Set(remoteProducts.map((p) => p.sku));
+          const unsyncedLocals = prev.filter(
+            (p) => !remoteSkus.has(p.sku) && p.websiteSyncStatus !== 'synced'
+          );
+          return [...remoteProducts, ...unsyncedLocals];
+        });
+        notify(`Loaded ${remoteProducts.length} product${remoteProducts.length === 1 ? '' : 's'} from Supabase`);
+      } catch {
+        notify('Network error loading products from Supabase.');
+      } finally {
+        setIsSyncingCatalog(false);
+      }
+    },
+    [adminToken, notify]
+  );
+
+  const syncSingleProductIfUnlocked = useCallback(
+    async (updatedProduct: ApparelProduct) => {
+      if (!adminToken || !backendConfig.supabaseConfigured) return;
+      try {
+        const res = await fetch('/api/website/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify(updatedProduct),
+        });
+        const contentType = res.headers.get('content-type') ?? '';
+        if (!contentType.includes('application/json')) return;
+        const data = (await res.json()) as { ok?: boolean; product?: ApparelProduct; error?: string };
+        if (res.status === 401) {
+          setAdminToken(null);
+          return;
+        }
+        if (res.ok && data.ok && data.product) {
+          setProducts((prev) => prev.map((p) => (p.sku === data.product!.sku ? data.product! : p)));
+        }
+      } catch {
+        // Keep local update if background sync fails
+      }
+    },
+    [adminToken, backendConfig.supabaseConfigured]
+  );
 
   const operatorName = settings.adminName?.trim() || settings.brandName || 'Admin';
 
@@ -495,9 +628,9 @@ export default function App() {
 
   const handleSaveWebsiteProduct = (product: ApparelProduct) => {
     setProducts((prev) => {
-      const exists = prev.some((p) => p.id === product.id);
+      const exists = prev.some((p) => p.id === product.id || p.sku === product.sku);
       if (exists) {
-        return prev.map((p) => (p.id === product.id ? product : p));
+        return prev.map((p) => (p.id === product.id || p.sku === product.sku ? product : p));
       }
       return [product, ...prev];
     });
@@ -511,6 +644,21 @@ export default function App() {
     }
     if (target) {
       notify(`Removed ${target.name} (${target.sku}) from catalog`);
+      if (adminToken && backendConfig.supabaseConfigured) {
+        void fetch(`/api/website/products?sku=${encodeURIComponent(target.sku)}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        }).then(async (res) => {
+          if (res.status === 401) {
+            setAdminToken(null);
+            notify('Removed locally; unlock admin session to delete from Supabase.');
+          } else if (!res.ok) {
+            notify(`Removed locally, but Supabase delete failed (HTTP ${res.status}).`);
+          }
+        }).catch(() => {
+          notify('Removed locally, but could not reach Supabase to delete.');
+        });
+      }
     }
   };
 
@@ -699,18 +847,23 @@ export default function App() {
             <ApparelProductsView
               products={products}
               categories={categories}
+              supabaseConfigured={backendConfig.supabaseConfigured}
+              backendUnlocked={Boolean(adminToken)}
               onToggleAvailability={(id) => {
-                setProducts((prev) =>
-                  prev.map((p) =>
-                    p.id === id
-                      ? { ...p, isAvailable: !p.isAvailable, publishedToWebsite: !p.isAvailable }
-                      : p
-                  )
-                );
+                const target = products.find((p) => p.id === id);
+                if (!target) return;
+                const updated: ApparelProduct = {
+                  ...target,
+                  isAvailable: !target.isAvailable,
+                  publishedToWebsite: !target.isAvailable,
+                };
+                setProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+                void syncSingleProductIfUnlocked(updated);
                 notify('Updated product catalog availability');
               }}
               onAddProduct={(prod) => {
                 setProducts((prev) => [prod, ...prev]);
+                void syncSingleProductIfUnlocked(prod);
                 notify(`Added ${prod.name} (${prod.sku}) to catalog`);
               }}
               onOpenWebsiteUpload={(productId) => {
@@ -725,6 +878,18 @@ export default function App() {
               products={products}
               categories={categories}
               editingProductId={editingProductId}
+              adminToken={adminToken}
+              backendConfig={backendConfig}
+              isSyncingCatalog={isSyncingCatalog}
+              onAdminTokenChange={(token) => {
+                setAdminToken(token);
+                if (token) {
+                  void refreshBackendConfig();
+                  void pullProductsFromSupabase(token);
+                }
+              }}
+              onRefreshConfig={refreshBackendConfig}
+              onPullFromSupabase={pullProductsFromSupabase}
               onSelectEditProduct={setEditingProductId}
               onSaveProduct={handleSaveWebsiteProduct}
               onDeleteProduct={handleDeleteProduct}
@@ -753,13 +918,14 @@ export default function App() {
             <ApparelInventoryView
               products={products}
               onAdjustStock={(id, delta) => {
-                setProducts((prev) =>
-                  prev.map((p) =>
-                    p.id === id
-                      ? { ...p, stockQuantity: Math.max(0, p.stockQuantity + delta) }
-                      : p
-                  )
-                );
+                const target = products.find((p) => p.id === id);
+                if (!target) return;
+                const updated: ApparelProduct = {
+                  ...target,
+                  stockQuantity: Math.max(0, target.stockQuantity + delta),
+                };
+                setProducts((prev) => prev.map((p) => (p.id === id ? updated : p)));
+                void syncSingleProductIfUnlocked(updated);
                 notify('Warehouse stock adjusted');
               }}
             />

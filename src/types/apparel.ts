@@ -189,6 +189,21 @@ export interface ApparelProduct {
   syncError?: string;
 }
 
+export interface BackendWebsiteConfig {
+  checked: boolean;
+  serverConfigured: boolean;
+  supabaseConfigured: boolean;
+  tableName: string;
+  storageBucketConfigured: boolean;
+  targetOrigin: string | null;
+  webhookOrigin: string | null;
+  webhookConfigured: boolean;
+  authConfigured: boolean;
+  authRequired: boolean;
+  authClaimed: boolean;
+  usingEnvPasscode: boolean;
+}
+
 export interface ApparelCategory {
   id: string;
   name: string;

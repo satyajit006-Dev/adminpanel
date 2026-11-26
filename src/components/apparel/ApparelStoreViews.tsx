@@ -14,12 +14,16 @@ import { THEME_PRESETS } from '../../utils/themes';
 export function ApparelProductsView({
   products,
   categories,
+  supabaseConfigured,
+  backendUnlocked,
   onToggleAvailability,
   onAddProduct,
   onOpenWebsiteUpload,
 }: {
   products: ApparelProduct[];
   categories: ApparelCategory[];
+  supabaseConfigured?: boolean;
+  backendUnlocked?: boolean;
   onToggleAvailability: (id: string) => void;
   onAddProduct: (item: ApparelProduct) => void;
   onOpenWebsiteUpload: (productId?: string) => void;
@@ -62,9 +66,27 @@ export function ApparelProductsView({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-ink-muted">
-          {products.length} products · {products.filter((p) => p.isAvailable).length} active
-        </p>
+        <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+          <span>
+            {products.length} products · {products.filter((p) => p.isAvailable).length} active
+          </span>
+          <span aria-hidden="true">·</span>
+          <button
+            type="button"
+            onClick={() => onOpenWebsiteUpload()}
+            className={`font-medium hover:underline ${
+              supabaseConfigured && backendUnlocked
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : 'text-ink-secondary'
+            }`}
+          >
+            {supabaseConfigured
+              ? backendUnlocked
+                ? 'Supabase Connected'
+                : 'Supabase Locked (Unlock in Upload View)'
+              : 'Local Catalog Mode'}
+          </button>
+        </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
