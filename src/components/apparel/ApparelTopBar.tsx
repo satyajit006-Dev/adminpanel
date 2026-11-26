@@ -1,4 +1,15 @@
-import { Bell, Check, Menu, Moon, Palette, Sun, UploadCloud, UserPlus } from 'lucide-react';
+import {
+  Bell,
+  Check,
+  LogOut,
+  Menu,
+  Moon,
+  Palette,
+  RefreshCw,
+  Sun,
+  UploadCloud,
+  UserPlus,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { ApparelRoute, LiveNotification, ThemePreset } from '../../types/apparel';
 import { formatTimeOnly } from '../../utils/apparelFormatters';
@@ -17,6 +28,10 @@ interface ApparelTopBarProps {
   notifications: LiveNotification[];
   onMarkAllRead: () => void;
   onSelectOrderFromNotification: (orderId: string) => void;
+  supabaseConfigured?: boolean;
+  isSyncing?: boolean;
+  onSyncAll?: () => void;
+  onSignOut: () => void;
 }
 
 const ROUTE_TITLES: Record<ApparelRoute, string> = {
@@ -51,6 +66,10 @@ export function ApparelTopBar({
   notifications,
   onMarkAllRead,
   onSelectOrderFromNotification,
+  supabaseConfigured,
+  isSyncing,
+  onSyncAll,
+  onSignOut,
 }: ApparelTopBarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
@@ -84,6 +103,22 @@ export function ApparelTopBar({
 
       {/* Zone 3: Contextual Primary Action + Alerts + Theme */}
       <div className="flex items-center gap-2.5 shrink-0 relative">
+        {supabaseConfigured && onSyncAll && (
+          <button
+            type="button"
+            disabled={isSyncing}
+            onClick={onSyncAll}
+            title="Refresh data from Supabase"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink disabled:opacity-50 transition-colors whitespace-nowrap shrink-0"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 shrink-0 ${isSyncing ? 'animate-spin' : ''}`}
+              aria-hidden="true"
+            />
+            <span>{isSyncing ? 'Syncing...' : 'Sync DB'}</span>
+          </button>
+        )}
+
         {activeRoute === 'accounts' ? (
           <button
             type="button"
@@ -265,6 +300,16 @@ export function ApparelTopBar({
           className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-secondary hover:bg-hover hover:text-ink transition-colors"
         >
           {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+
+        <button
+          type="button"
+          onClick={onSignOut}
+          aria-label="Sign out"
+          title="Sign out"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-secondary hover:bg-hover hover:text-ink transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
         </button>
       </div>
     </header>

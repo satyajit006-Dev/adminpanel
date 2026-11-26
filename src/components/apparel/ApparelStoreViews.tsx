@@ -18,6 +18,7 @@ export function ApparelProductsView({
   backendUnlocked,
   onToggleAvailability,
   onAddProduct,
+  onDeleteProduct,
   onOpenWebsiteUpload,
 }: {
   products: ApparelProduct[];
@@ -26,6 +27,7 @@ export function ApparelProductsView({
   backendUnlocked?: boolean;
   onToggleAvailability: (id: string) => void;
   onAddProduct: (item: ApparelProduct) => void;
+  onDeleteProduct: (id: string) => void;
   onOpenWebsiteUpload: (productId?: string) => void;
 }) {
   const [adding, setAdding] = useState(false);
@@ -285,14 +287,24 @@ export function ApparelProductsView({
                         </button>
                       </td>
                       <td className="py-3 pl-3 pr-5 text-right whitespace-nowrap">
-                        <button
-                          type="button"
-                          onClick={() => onOpenWebsiteUpload(item.id)}
-                          className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:bg-hover transition-colors"
-                        >
-                          <Pencil className="h-3 w-3" aria-hidden="true" />
-                          <span>Edit / Upload</span>
-                        </button>
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => onOpenWebsiteUpload(item.id)}
+                            className="inline-flex items-center gap-1 rounded-md border border-line bg-surface px-2.5 py-1 text-xs font-medium text-ink-secondary hover:bg-hover transition-colors"
+                          >
+                            <Pencil className="h-3 w-3" aria-hidden="true" />
+                            <span>Edit / Upload</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteProduct(item.id)}
+                            aria-label={`Delete ${item.name}`}
+                            className="inline-flex items-center rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/40 transition-colors"
+                          >
+                            <Trash2 className="h-3 w-3" aria-hidden="true" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

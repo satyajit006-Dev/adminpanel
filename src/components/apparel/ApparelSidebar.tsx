@@ -6,6 +6,7 @@ import {
   ClipboardList,
   FolderTree,
   LayoutDashboard,
+  LogOut,
   Radio,
   Receipt,
   RotateCcw,
@@ -32,6 +33,7 @@ interface ApparelSidebarProps {
   brandName: string;
   adminName?: string;
   adminEmail?: string;
+  onSignOut: () => void;
 }
 
 interface NavGroup {
@@ -56,6 +58,7 @@ export function ApparelSidebar({
   brandName,
   adminName,
   adminEmail,
+  onSignOut,
 }: ApparelSidebarProps) {
   const operatorName = adminName?.trim() || 'Store Admin';
   const operatorSub = adminEmail?.trim() || 'Operations Administrator';
@@ -198,17 +201,26 @@ export function ApparelSidebar({
       </nav>
 
       {/* Operator Footer */}
-      <div className="border-t border-sidebar-border px-5 py-3.5 shrink-0">
+      <div className="border-t border-sidebar-border px-4 py-3.5 shrink-0 flex items-center justify-between gap-2">
         <button
           type="button"
           onClick={() => handleSelect('settings')}
-          className="flex w-full items-center gap-3 text-left hover:opacity-90 transition-opacity"
+          className="flex min-w-0 flex-1 items-center gap-3 text-left hover:opacity-90 transition-opacity"
         >
           <Avatar name={operatorName} size="sm" />
           <div className="min-w-0">
             <p className="truncate text-xs font-semibold text-sidebar-ink">{operatorName}</p>
             <p className="truncate text-[11px] text-sidebar-muted">{operatorSub}</p>
           </div>
+        </button>
+        <button
+          type="button"
+          onClick={onSignOut}
+          title="Sign out of Admin Panel"
+          aria-label="Sign out of Admin Panel"
+          className="shrink-0 rounded-lg p-2 text-sidebar-muted hover:bg-sidebar-hover hover:text-sidebar-ink transition-colors"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
     </div>

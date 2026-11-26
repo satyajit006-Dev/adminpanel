@@ -32,15 +32,30 @@ export function getSupabaseOrigin(): string | null {
   return url ? url.origin : null;
 }
 
-export function getProductsTableName(): string {
-  const raw = process.env.SUPABASE_PRODUCTS_TABLE?.trim() || 'products';
-  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(raw) ? raw : 'products';
+function safeTableName(envValue: string | undefined, fallback: string): string {
+  const raw = envValue?.trim() || fallback;
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(raw) ? raw : fallback;
 }
 
-export function getStorageBucketName(): string | null {
-  const raw = process.env.SUPABASE_STORAGE_BUCKET?.trim();
-  if (!raw) return null;
-  return /^[a-zA-Z0-9._-]+$/.test(raw) ? raw : null;
+export function getProductsTableName(): string {
+  return safeTableName(process.env.SUPABASE_PRODUCTS_TABLE, 'products');
+}
+
+export function getOrdersTableName(): string {
+  return safeTableName(process.env.SUPABASE_ORDERS_TABLE, 'orders');
+}
+
+export function getCustomersTableName(): string {
+  return safeTableName(process.env.SUPABASE_CUSTOMERS_TABLE, 'customers');
+}
+
+export function getTransactionsTableName(): string {
+  return safeTableName(process.env.SUPABASE_TRANSACTIONS_TABLE, 'transactions');
+}
+
+export function getStorageBucketName(): string {
+  const raw = process.env.SUPABASE_STORAGE_BUCKET?.trim() || 'product-images';
+  return /^[a-zA-Z0-9._-]+$/.test(raw) ? raw : 'product-images';
 }
 
 let cachedClient: { key: string; client: SupabaseClient } | null = null;

@@ -10,6 +10,7 @@ import {
   ApparelAccountsView,
   ApparelCreateAccountModal,
 } from './components/apparel/ApparelAccountsView';
+import { ApparelAdminLoginGate } from './components/apparel/ApparelAdminLoginGate';
 import { ApparelAllOrdersView } from './components/apparel/ApparelAllOrdersView';
 import { ApparelDashboardView } from './components/apparel/ApparelDashboardView';
 import {
@@ -301,6 +302,102 @@ export default function App() {
     [adminToken, notify]
   );
 
+  const syncAllFromSupabase = useCallback(
+    async (tokenOverride?: string, silent = false) => {
+      const activeToken = tokenOverride ?? adminToken;
+      if (!activeToken) return;
+
+      setIsSyncingCatalog(true);
+      try {
+        const headers = { Authorization: `Bearer ${activeToken}` };
+        const [prodRes, ordRes, custRes, txRes] = await Promise.all([
+          fetch('/api/website/products', { headers }),
+          fetch('/api/admin/orders', { headers }),
+          fetch('/api/admin/customers', { headers }),
+          fetch('/api/admin/transactions', { headers }),
+        ]);
+
+        if (
+          prodRes.status === 401 ||
+          ordRes.status === 401 ||
+          custRes.status === 401 ||
+          txRes.status === 401
+        ) {
+          setAdminToken(null);
+          notify('Session expired. Please sign in again.');
+          return;
+        }
+
+        let loadedCounts: string[] = [];
+
+        if (prodRes.ok && (prodRes.headers.get('content-type') ?? '').includes('application/json')) {
+          const prodData = (await prodRes.json()) as {
+            ok?: boolean;
+            products?: ApparelProduct[];
+          };
+          if (prodData.ok && Array.isArray(prodData.products)) {
+            const remoteProducts = prodData.products;
+            setProducts((prev) => {
+              const remoteSkus = new Set(remoteProducts.map((p) => p.sku));
+              const unsyncedLocals = prev.filter(
+                (p) => !remoteSkus.has(p.sku) && p.websiteSyncStatus !== 'synced'
+              );
+              return [...remoteProducts, ...unsyncedLocals];
+            });
+            loadedCounts.push(`${remoteProducts.length} products`);
+          }
+        }
+
+        if (ordRes.ok && (ordRes.headers.get('content-type') ?? '').includes('application/json')) {
+          const ordData = (await ordRes.json()) as {
+            ok?: boolean;
+            tableMissing?: boolean;
+            orders?: ApparelOrder[];
+          };
+          if (ordData.ok && !ordData.tableMissing && Array.isArray(ordData.orders)) {
+            setOrders(ordData.orders);
+            loadedCounts.push(`${ordData.orders.length} orders`);
+          }
+        }
+
+        if (custRes.ok && (custRes.headers.get('content-type') ?? '').includes('application/json')) {
+          const custData = (await custRes.json()) as {
+            ok?: boolean;
+            tableMissing?: boolean;
+            customers?: UserAccount[];
+          };
+          if (custData.ok && !custData.tableMissing && Array.isArray(custData.customers)) {
+            setAccounts(custData.customers);
+            loadedCounts.push(`${custData.customers.length} customers`);
+          }
+        }
+
+        if (txRes.ok && (txRes.headers.get('content-type') ?? '').includes('application/json')) {
+          const txData = (await txRes.json()) as {
+            ok?: boolean;
+            tableMissing?: boolean;
+            transactions?: Transaction[];
+          };
+          if (txData.ok && !txData.tableMissing && Array.isArray(txData.transactions)) {
+            setTransactions(txData.transactions);
+            loadedCounts.push(`${txData.transactions.length} transactions`);
+          }
+        }
+
+        if (!silent && loadedCounts.length > 0) {
+          notify(`Synced from Supabase: ${loadedCounts.join(' · ')}`);
+        }
+      } catch {
+        if (!silent) {
+          notify('Could not complete Supabase sync.');
+        }
+      } finally {
+        setIsSyncingCatalog(false);
+      }
+    },
+    [adminToken, notify]
+  );
+
   const syncSingleProductIfUnlocked = useCallback(
     async (updatedProduct: ApparelProduct) => {
       if (!adminToken || !backendConfig.supabaseConfigured) return;
@@ -325,6 +422,90 @@ export default function App() {
         }
       } catch {
         // Keep local update if background sync fails
+      }
+    },
+    [adminToken, backendConfig.supabaseConfigured]
+  );
+
+  const persistOrderPatch = useCallback(
+    async (patch: Record<string, unknown>) => {
+      if (!adminToken || !backendConfig.supabaseConfigured) return;
+      try {
+        const res = await fetch('/api/admin/orders', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify(patch),
+        });
+        if (res.status === 401) {
+          setAdminToken(null);
+        }
+      } catch {
+        // Keep local state if background request fails
+      }
+    },
+    [adminToken, backendConfig.supabaseConfigured]
+  );
+
+  const persistTransactionPatch = useCallback(
+    async (patch: Record<string, unknown>) => {
+      if (!adminToken || !backendConfig.supabaseConfigured) return;
+      try {
+        const res = await fetch('/api/admin/transactions', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify(patch),
+        });
+        if (res.status === 401) {
+          setAdminToken(null);
+        }
+      } catch {
+        // Keep local state if background request fails
+      }
+    },
+    [adminToken, backendConfig.supabaseConfigured]
+  );
+
+  const persistCustomerUpsert = useCallback(
+    async (customer: UserAccount) => {
+      if (!adminToken || !backendConfig.supabaseConfigured) return;
+      try {
+        const res = await fetch('/api/admin/customers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${adminToken}`,
+          },
+          body: JSON.stringify(customer),
+        });
+        if (res.status === 401) {
+          setAdminToken(null);
+        }
+      } catch {
+        // Keep local state if background request fails
+      }
+    },
+    [adminToken, backendConfig.supabaseConfigured]
+  );
+
+  const persistCustomerDelete = useCallback(
+    async (id: string) => {
+      if (!adminToken || !backendConfig.supabaseConfigured) return;
+      try {
+        const res = await fetch(`/api/admin/customers?id=${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${adminToken}` },
+        });
+        if (res.status === 401) {
+          setAdminToken(null);
+        }
+      } catch {
+        // Keep local state if background request fails
       }
     },
     [adminToken, backendConfig.supabaseConfigured]
@@ -369,6 +550,8 @@ export default function App() {
     note?: string
   ) => {
     const nowIso = new Date().toISOString();
+    const confirmedAt = nextStatus === 'confirmed' && !order.confirmedAt ? nowIso : order.confirmedAt;
+    const completedAt = nextStatus === 'completed' ? nowIso : order.completedAt;
     setOrders((prev) =>
       prev.map((o) => {
         if (o.id !== order.id) return o;
@@ -376,8 +559,8 @@ export default function App() {
           ...o,
           orderStatus: nextStatus,
           updatedAt: nowIso,
-          confirmedAt: nextStatus === 'confirmed' && !o.confirmedAt ? nowIso : o.confirmedAt,
-          completedAt: nextStatus === 'completed' ? nowIso : o.completedAt,
+          confirmedAt,
+          completedAt,
         };
       })
     );
@@ -404,6 +587,12 @@ export default function App() {
       },
       ...prev,
     ]);
+    void persistOrderPatch({
+      id: order.id,
+      orderStatus: nextStatus,
+      confirmedAt,
+      completedAt,
+    });
     notify(`${order.orderNumber} marked as ${ORDER_STATUS_LABELS[nextStatus]}`);
   };
 
@@ -445,6 +634,11 @@ export default function App() {
       },
       ...prev,
     ]);
+    void persistOrderPatch({
+      id: order.id,
+      orderStatus: terminal,
+      cancellationReason: reason,
+    });
     notify(`${order.orderNumber} ${isReject ? 'rejected' : 'cancelled'}`);
   };
 
@@ -464,6 +658,10 @@ export default function App() {
       },
       ...prev,
     ]);
+    void persistOrderPatch({
+      id: orderId,
+      staffNotes: notes,
+    });
     notify('Internal warehouse / stylist note saved');
   };
 
@@ -518,6 +716,23 @@ export default function App() {
         },
         ...prev,
       ]);
+    }
+
+    void persistTransactionPatch({
+      id: tx.id,
+      status: 'success',
+      verifiedByWebhook: true,
+    });
+    void persistOrderPatch({
+      id: tx.orderId,
+      paymentStatus: 'Paid',
+    });
+    const matchedAccount = accounts.find((a) => a.id === tx.accountId);
+    if (matchedAccount) {
+      void persistCustomerUpsert({
+        ...matchedAccount,
+        lifetimeSpend: matchedAccount.lifetimeSpend + tx.amount,
+      });
     }
 
     notify(
@@ -593,24 +808,56 @@ export default function App() {
       },
       ...prev,
     ]);
+    void persistTransactionPatch({
+      id: tx.id,
+      refundedAmount: newRefundTotal,
+      status: isFull ? 'refunded' : 'partially_refunded',
+    });
+    void persistOrderPatch({
+      id: tx.orderId,
+      paymentStatus: isFull ? 'Refunded' : 'Partially Refunded',
+    });
     notify(`Processed ${formatInr(amount)} refund for ${tx.orderNumber}`);
   };
 
   // Account Handlers
   const handleUpdateAccount = (updated: UserAccount, auditSummary: string) => {
     setAccounts((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+    void persistCustomerUpsert(updated);
     notify(`${updated.fullName}: ${auditSummary}`);
   };
 
   const handleBulkUpdateStatus = (ids: string[], status: AccountStatus) => {
     const idSet = new Set(ids);
-    setAccounts((prev) => prev.map((a) => (idSet.has(a.id) ? { ...a, status } : a)));
+    const updatedList: UserAccount[] = [];
+    setAccounts((prev) =>
+      prev.map((a) => {
+        if (!idSet.has(a.id)) return a;
+        const next = { ...a, status };
+        updatedList.push(next);
+        return next;
+      })
+    );
+    for (const acc of updatedList) {
+      void persistCustomerUpsert(acc);
+    }
     notify(`Updated ${ids.length} account${ids.length > 1 ? 's' : ''} to ${status}`);
   };
 
   const handleBulkUpdateTier = (ids: string[], tier: LoyaltyTier) => {
     const idSet = new Set(ids);
-    setAccounts((prev) => prev.map((a) => (idSet.has(a.id) ? { ...a, tier } : a)));
+    const updatedList: UserAccount[] = [];
+    setAccounts((prev) =>
+      prev.map((a) => {
+        if (!idSet.has(a.id)) return a;
+        const next = { ...a, tier };
+        updatedList.push(next);
+        return next;
+      })
+    );
+    for (const acc of updatedList) {
+      void persistCustomerUpsert(acc);
+    }
     notify(`Assigned ${tier} tier to ${ids.length} account${ids.length > 1 ? 's' : ''}`);
   };
 
@@ -618,11 +865,13 @@ export default function App() {
     const target = accounts.find((a) => a.id === id);
     setAccounts((prev) => prev.filter((a) => a.id !== id));
     setSelectedAccountId(null);
+    void persistCustomerDelete(id);
     if (target) notify(`Removed account ${target.fullName} (${target.id})`);
   };
 
   const handleCreateAccount = (newAccount: UserAccount) => {
     setAccounts((prev) => [newAccount, ...prev]);
+    void persistCustomerUpsert(newAccount);
     notify(`Created ${newAccount.segment.toLowerCase()} account for ${newAccount.fullName}`);
   };
 
@@ -706,6 +955,42 @@ export default function App() {
     : null;
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId) ?? null;
 
+  const handleSignOut = () => {
+    setAdminToken(null);
+    setMobileOpen(false);
+    setSelectedOrderId(null);
+    setSelectedTxId(null);
+    setSelectedAccountId(null);
+    notify('Signed out of Admin Panel');
+  };
+
+  if (!adminToken) {
+    return (
+      <>
+        <ApparelAdminLoginGate
+          brandName={settings.brandName}
+          isDark={isDark}
+          onToggleTheme={() => setIsDark((p) => !p)}
+          backendConfig={backendConfig}
+          onRefreshConfig={refreshBackendConfig}
+          onAuthenticated={(token, isFirstClaim) => {
+            setAdminToken(token);
+            void refreshBackendConfig();
+            if (backendConfig.supabaseConfigured) {
+              void syncAllFromSupabase(token, false);
+            }
+            notify(
+              isFirstClaim
+                ? 'Admin passcode saved and session unlocked.'
+                : 'Signed in to Admin Panel.'
+            );
+          }}
+        />
+        <Toast toast={toast} onDismiss={() => setToast(null)} />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen flex bg-canvas text-ink transition-colors duration-200">
       <ApparelSidebar
@@ -720,6 +1005,7 @@ export default function App() {
         brandName={settings.brandName}
         adminName={settings.adminName}
         adminEmail={settings.email}
+        onSignOut={handleSignOut}
       />
 
       <div className="flex-1 min-w-0 flex flex-col">
@@ -759,6 +1045,10 @@ export default function App() {
             );
             setSelectedOrderId(orderId);
           }}
+          supabaseConfigured={backendConfig.supabaseConfigured}
+          isSyncing={isSyncingCatalog}
+          onSyncAll={() => void syncAllFromSupabase()}
+          onSignOut={handleSignOut}
         />
 
         <main className="flex-1 px-4 py-6 sm:px-8 sm:py-7 max-w-[1400px] w-full mx-auto">
@@ -866,6 +1156,7 @@ export default function App() {
                 void syncSingleProductIfUnlocked(prod);
                 notify(`Added ${prod.name} (${prod.sku}) to catalog`);
               }}
+              onDeleteProduct={handleDeleteProduct}
               onOpenWebsiteUpload={(productId) => {
                 setEditingProductId(productId ?? null);
                 setActiveRoute('website_upload');

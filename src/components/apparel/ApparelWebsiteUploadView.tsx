@@ -5,7 +5,6 @@ import {
   Database,
   Globe,
   ImagePlus,
-  KeyRound,
   Link2,
   Lock,
   Pencil,
@@ -178,10 +177,7 @@ export function ApparelWebsiteUploadView({
       return '';
     }
   });
-  const [passcodeInput, setPasscodeInput] = useState('');
-  const [confirmPasscodeInput, setConfirmPasscodeInput] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [showCodeGuide, setShowCodeGuide] = useState(false);
@@ -269,12 +265,58 @@ export function ApparelWebsiteUploadView({
       return;
     }
 
+    setUploadingImages(true);
     try {
       const dataUrls = await Promise.all(toProcess.map((f) => compressImageFile(f)));
-      setImages((prev) => [...prev, ...dataUrls]);
-      onNotify(`Added ${dataUrls.length} product photo${dataUrls.length > 1 ? 's' : ''}`);
+      if (adminToken && backendConfig.supabaseConfigured) {
+        let storageUploadedCount = 0;
+        const resolvedUrls = await Promise.all(
+          dataUrls.map(async (dataUrl) => {
+            try {
+              const res = await fetch('/api/website/upload-image', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${adminToken}`,
+                },
+                body: JSON.stringify({
+                  dataUrl,
+                  sku: sku.trim() || 'product',
+                }),
+              });
+              if (res.status === 401) {
+                onAdminTokenChange(null);
+                return dataUrl;
+              }
+              const contentType = res.headers.get('content-type') ?? '';
+              if (!res.ok || !contentType.includes('application/json')) {
+                return dataUrl;
+              }
+              const data = (await res.json()) as { ok?: boolean; publicUrl?: string };
+              if (data.ok && data.publicUrl) {
+                storageUploadedCount += 1;
+                return data.publicUrl;
+              }
+              return dataUrl;
+            } catch {
+              return dataUrl;
+            }
+          })
+        );
+        setImages((prev) => [...prev, ...resolvedUrls]);
+        onNotify(
+          storageUploadedCount > 0
+            ? `Uploaded ${storageUploadedCount} photo${storageUploadedCount > 1 ? 's' : ''} to Supabase Storage`
+            : `Added ${resolvedUrls.length} product photo${resolvedUrls.length > 1 ? 's' : ''}`
+        );
+      } else {
+        setImages((prev) => [...prev, ...dataUrls]);
+        onNotify(`Added ${dataUrls.length} product photo${dataUrls.length > 1 ? 's' : ''}`);
+      }
     } catch (err) {
       onNotify(err instanceof Error ? err.message : 'Failed to process selected image.');
+    } finally {
+      setUploadingImages(false);
     }
   };
 
@@ -379,68 +421,6 @@ export function ApparelWebsiteUploadView({
       parsedTags,
     ]
   );
-
-  const handleAdminAuthenticate = async () => {
-    setAuthError(null);
-    const cleaned = passcodeInput.trim();
-    if (!cleaned) {
-      setAuthError('Enter your admin passcode.');
-      return;
-    }
-
-    const isClaimFlow = !backendConfig.authClaimed && !backendConfig.usingEnvPasscode;
-    if (isClaimFlow) {
-      if (cleaned.length < 8) {
-        setAuthError('First-run admin passcode must be at least 8 characters.');
-        return;
-      }
-      if (cleaned !== confirmPasscodeInput.trim()) {
-        setAuthError('Passcodes do not match.');
-        return;
-      }
-    }
-
-    setAuthSubmitting(true);
-    try {
-      const endpoint = isClaimFlow ? '/api/admin/auth/claim' : '/api/admin/auth/login';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode: cleaned }),
-      });
-      const contentType = res.headers.get('content-type') ?? '';
-      if (!contentType.includes('application/json')) {
-        setAuthError(`Auth API unavailable (HTTP ${res.status}).`);
-        return;
-      }
-      const data = (await res.json()) as {
-        ok?: boolean;
-        token?: string;
-        error?: string;
-        needsSetup?: boolean;
-      };
-      if (!res.ok || !data.ok || !data.token) {
-        setAuthError(data.error ?? `Authentication failed (HTTP ${res.status}).`);
-        if (data.needsSetup) {
-          await onRefreshConfig();
-        }
-        return;
-      }
-
-      setPasscodeInput('');
-      setConfirmPasscodeInput('');
-      onAdminTokenChange(data.token);
-      onNotify(
-        isClaimFlow
-          ? 'Admin passcode claimed and Supabase session unlocked.'
-          : 'Admin session unlocked.'
-      );
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Failed to reach authentication API.');
-    } finally {
-      setAuthSubmitting(false);
-    }
-  };
 
   const pushProductToBackend = async (product: ApparelProduct): Promise<ApparelProduct> => {
     const nowIso = new Date().toISOString();
@@ -848,17 +828,23 @@ const { data: products } = await supabase
               />
               <UploadCloud className="mx-auto h-7 w-7 text-ink-muted" aria-hidden="true" />
               <p className="mt-2 text-xs font-medium text-ink">
-                Drag and drop garment photos here, or{' '}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="font-semibold text-accent-text hover:underline"
-                >
-                  browse from computer
-                </button>
+                {uploadingImages ? (
+                  <span>Uploading to Supabase Storage...</span>
+                ) : (
+                  <>
+                    Drag and drop garment photos here, or{' '}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="font-semibold text-accent-text hover:underline"
+                    >
+                      browse from computer
+                    </button>
+                  </>
+                )}
               </p>
               <p className="mt-1 text-[11px] text-ink-muted">
-                Images are automatically optimized to 1080px JPEG for fast storefront delivery.
+                Images are optimized to 1080px JPEG and uploaded to Supabase Storage when connected.
               </p>
             </div>
 
@@ -1417,113 +1403,38 @@ const { data: products } = await supabase
                   )}
                 </div>
 
-                {/* Admin Session Unlock / First-Run Passcode Setup */}
-                {!adminToken ? (
-                  <div className="rounded-lg border border-line bg-subtle/40 p-3.5 space-y-2.5">
-                    <div className="flex items-center gap-2">
-                      <KeyRound className="h-3.5 w-3.5 text-accent-text shrink-0" aria-hidden="true" />
-                      <span className="text-xs font-semibold text-ink">
-                        {!backendConfig.authClaimed && !backendConfig.usingEnvPasscode
-                          ? 'Set Admin Backend Passcode (First-Run Setup)'
-                          : 'Unlock Supabase Admin Session'}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-ink-muted">
-                      {!backendConfig.authClaimed && !backendConfig.usingEnvPasscode
-                        ? 'Create your admin passcode (min 8 chars) to protect Supabase product sync, or set ADMIN_PASSCODE in server secrets.'
-                        : 'Enter your admin passcode to read, publish, update, and delete products in Supabase.'}
-                    </p>
-
-                    <div className="space-y-2">
-                      <input
-                        type="password"
-                        value={passcodeInput}
-                        onChange={(e) => setPasscodeInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            void handleAdminAuthenticate();
-                          }
-                        }}
-                        placeholder={
-                          !backendConfig.authClaimed && !backendConfig.usingEnvPasscode
-                            ? 'Choose admin passcode (min 8 chars)'
-                            : 'Enter admin passcode'
-                        }
-                        aria-label="Admin passcode"
-                        className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
+                {/* Authenticated Admin Session Banner */}
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-emerald-200/70 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20 px-3 py-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
+                    <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>Admin session authenticated</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isSyncingCatalog || !backendConfig.supabaseConfigured}
+                      onClick={() => void onPullFromSupabase()}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-secondary hover:text-ink disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        className={`h-3 w-3 ${isSyncingCatalog ? 'animate-spin' : ''}`}
+                        aria-hidden="true"
                       />
-                      {!backendConfig.authClaimed && !backendConfig.usingEnvPasscode && (
-                        <input
-                          type="password"
-                          value={confirmPasscodeInput}
-                          onChange={(e) => setConfirmPasscodeInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              void handleAdminAuthenticate();
-                            }
-                          }}
-                          placeholder="Confirm admin passcode"
-                          aria-label="Confirm admin passcode"
-                          className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-xs text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
-                        />
-                      )}
-                      {authError && (
-                        <p className="text-[11px] font-medium text-red-700 dark:text-red-400">
-                          {authError}
-                        </p>
-                      )}
-                      <button
-                        type="button"
-                        disabled={authSubmitting}
-                        onClick={() => void handleAdminAuthenticate()}
-                        className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-semibold text-ink hover:bg-hover disabled:opacity-60 transition-colors"
-                      >
-                        <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                        <span>
-                          {authSubmitting
-                            ? 'Verifying...'
-                            : !backendConfig.authClaimed && !backendConfig.usingEnvPasscode
-                              ? 'Save Passcode & Unlock'
-                              : 'Unlock Backend'}
-                        </span>
-                      </button>
-                    </div>
+                      <span>Pull</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAdminTokenChange(null);
+                        onNotify('Signed out and locked Admin Panel');
+                      }}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-muted hover:text-ink"
+                    >
+                      <Lock className="h-3 w-3" aria-hidden="true" />
+                      <span>Lock</span>
+                    </button>
                   </div>
-                ) : (
-                  <div className="flex items-center justify-between gap-2 rounded-lg border border-emerald-200/70 bg-emerald-50/60 dark:border-emerald-900/50 dark:bg-emerald-950/20 px-3 py-2 text-xs">
-                    <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700 dark:text-emerald-400">
-                      <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                      <span>Admin session active</span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={isSyncingCatalog || !backendConfig.supabaseConfigured}
-                        onClick={() => void onPullFromSupabase()}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-secondary hover:text-ink disabled:opacity-50"
-                      >
-                        <RefreshCw
-                          className={`h-3 w-3 ${isSyncingCatalog ? 'animate-spin' : ''}`}
-                          aria-hidden="true"
-                        />
-                        <span>Pull</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onAdminTokenChange(null);
-                          onNotify('Admin backend session locked');
-                        }}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-ink-muted hover:text-ink"
-                      >
-                        <Lock className="h-3 w-3" aria-hidden="true" />
-                        <span>Lock</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             ) : (
               <div className="space-y-2">

@@ -98,7 +98,15 @@ export function ApparelDashboardView({
       }
     }
 
+    const totalNet = settledTx.reduce((s, t) => s + (t.amount - t.refundedAmount), 0);
+    const ongoingOrdersCount = orders.filter((o) => isOngoingOrder(o.orderStatus)).length;
+    const activeCustomersCount = accounts.filter((a) => a.status === 'Active').length;
+    const publishedProductsCount = products.filter(
+      (p) => p.publishedToWebsite ?? p.isAvailable
+    ).length;
+
     return {
+      totalNet,
       todayNet,
       totalCash,
       totalOnline,
@@ -109,8 +117,11 @@ export function ApparelDashboardView({
       avgProcessingMins,
       mostUsedMethod,
       mostUsedCount: highestCount,
+      ongoingOrdersCount,
+      activeCustomersCount,
+      publishedProductsCount,
     };
-  }, [orders, transactions]);
+  }, [accounts, orders, products, transactions]);
 
   const chartSeries = useMemo(() => {
     const now = new Date();
@@ -190,47 +201,29 @@ export function ApparelDashboardView({
             className="rounded-xl border border-line bg-surface p-5 text-left hover:border-accent/50 transition-colors"
           >
             <p className="text-xs font-medium text-ink-muted">
-              Today&apos;s Net Revenue
+              Total Sales &amp; Revenue
             </p>
             <p className="mt-1.5 font-mono text-2xl font-bold text-ink tabular-nums">
-              {formatInr(analytics.todayNet)}
+              {formatInr(analytics.totalNet)}
             </p>
             <p className="mt-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-mono tabular-nums">
-              Online {formatInr(analytics.totalOnline)} · Cash {formatInr(analytics.totalCash)}
+              Today {formatInr(analytics.todayNet)} · Online {formatInr(analytics.totalOnline)}
             </p>
           </button>
 
           <button
             type="button"
-            onClick={() => onNavigate('live_orders')}
+            onClick={() => onNavigate('all_orders')}
             className="rounded-xl border border-line bg-surface p-5 text-left hover:border-accent/50 transition-colors"
           >
             <p className="text-xs font-medium text-ink-muted">
-              Avg Order Value &amp; Fulfillment
+              Orders &amp; Fulfillment
             </p>
             <p className="mt-1.5 font-mono text-2xl font-bold text-ink tabular-nums">
-              {formatInr(analytics.aov)}
+              {orders.length} {orders.length === 1 ? 'Order' : 'Orders'}
             </p>
             <p className="mt-1.5 text-xs text-ink-muted font-mono tabular-nums">
-              Avg dispatch:{' '}
-              {analytics.avgProcessingMins !== null ? `${analytics.avgProcessingMins} mins` : '—'} ·{' '}
-              {analytics.cancellationRate.toFixed(1)}% cancel
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onNavigate('transactions')}
-            className="rounded-xl border border-line bg-surface p-5 text-left hover:border-accent/50 transition-colors"
-          >
-            <p className="text-xs font-medium text-ink-muted">
-              Pending Payments &amp; Refunds
-            </p>
-            <p className="mt-1.5 font-mono text-2xl font-bold text-amber-700 dark:text-amber-400 tabular-nums">
-              {formatInr(analytics.pendingAmount)}
-            </p>
-            <p className="mt-1.5 text-xs text-ink-muted font-mono tabular-nums">
-              Refunds issued: {formatInr(analytics.totalRefunds)}
+              {analytics.ongoingOrdersCount} ongoing · AOV {formatInr(analytics.aov)}
             </p>
           </button>
 
@@ -240,15 +233,32 @@ export function ApparelDashboardView({
             className="rounded-xl border border-line bg-surface p-5 text-left hover:border-accent/50 transition-colors"
           >
             <p className="text-xs font-medium text-ink-muted">
-              User Accounts &amp; Top Method
+              Customers &amp; Accounts
             </p>
             <p className="mt-1.5 font-mono text-2xl font-bold text-ink tabular-nums">
-              {accounts.length} {accounts.length === 1 ? 'Account' : 'Accounts'}
+              {accounts.length} {accounts.length === 1 ? 'Customer' : 'Customers'}
             </p>
             <p className="mt-1.5 text-xs text-ink-muted font-mono tabular-nums">
+              {analytics.activeCustomersCount} active ·{' '}
               {analytics.mostUsedMethod
-                ? `Top method: ${analytics.mostUsedMethod} (${analytics.mostUsedCount} txns)`
+                ? `Top: ${analytics.mostUsedMethod}`
                 : 'No transactions yet'}
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('products')}
+            className="rounded-xl border border-line bg-surface p-5 text-left hover:border-accent/50 transition-colors"
+          >
+            <p className="text-xs font-medium text-ink-muted">
+              Products &amp; Inventory
+            </p>
+            <p className="mt-1.5 font-mono text-2xl font-bold text-ink tabular-nums">
+              {products.length} {products.length === 1 ? 'Product' : 'Products'}
+            </p>
+            <p className="mt-1.5 text-xs text-ink-muted font-mono tabular-nums">
+              {analytics.publishedProductsCount} live · {lowStockItems.length} low stock
             </p>
           </button>
         </div>

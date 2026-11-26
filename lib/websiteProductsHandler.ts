@@ -172,10 +172,18 @@ async function uploadDataUrlImagesIfBucketConfigured(
       const objectPath = `products/${safeSku}/${Date.now()}-${index}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
 
       try {
-        const { error } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
+        let { error } = await supabase.storage.from(bucket).upload(objectPath, buffer, {
           contentType: mimeType,
           upsert: false,
         });
+        if (error && /bucket.*not.*found/i.test(error.message)) {
+          await supabase.storage.createBucket(bucket, { public: true });
+          const retry = await supabase.storage.from(bucket).upload(objectPath, buffer, {
+            contentType: mimeType,
+            upsert: false,
+          });
+          error = retry.error;
+        }
         if (error) {
           return img;
         }

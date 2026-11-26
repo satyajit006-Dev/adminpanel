@@ -5,6 +5,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { handleAdminLogin, handleClaimAdminPasscode } from './lib/adminAuth';
 import {
+  handleDeleteCustomer,
+  handleListCustomers,
+  handleListOrders,
+  handleListTransactions,
+  handleUpdateOrder,
+  handleUpdateTransaction,
+  handleUploadProductImage,
+  handleUpsertCustomer,
+} from './lib/supabaseAdminData';
+import {
   getWebsiteConfig,
   handleDeleteWebsiteProduct,
   handleListWebsiteProducts,
@@ -63,6 +73,76 @@ async function startServer() {
     const id = typeof req.query.id === 'string' ? req.query.id : undefined;
     const sku = typeof req.query.sku === 'string' ? req.query.sku : undefined;
     const result = await handleDeleteWebsiteProduct({ id, sku }, req.headers.authorization);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/website/upload-image', async (req, res) => {
+    const result = await handleUploadProductImage(
+      (req.body as Record<string, unknown> | null) ?? null,
+      req.headers.authorization
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.get('/api/admin/orders', async (req, res) => {
+    const result = await handleListOrders(req.headers.authorization);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.patch('/api/admin/orders', async (req, res) => {
+    const result = await handleUpdateOrder(
+      (req.body as Record<string, unknown> | null) ?? null,
+      req.headers.authorization
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.get('/api/admin/customers', async (req, res) => {
+    const result = await handleListCustomers(req.headers.authorization);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.post('/api/admin/customers', async (req, res) => {
+    const result = await handleUpsertCustomer(
+      (req.body as Record<string, unknown> | null) ?? null,
+      req.headers.authorization
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.patch('/api/admin/customers', async (req, res) => {
+    const result = await handleUpsertCustomer(
+      (req.body as Record<string, unknown> | null) ?? null,
+      req.headers.authorization
+    );
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.delete('/api/admin/customers', async (req, res) => {
+    const id = typeof req.query.id === 'string' ? req.query.id : undefined;
+    const result = await handleDeleteCustomer(id, req.headers.authorization);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.get('/api/admin/transactions', async (req, res) => {
+    const result = await handleListTransactions(req.headers.authorization);
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(result.status).json(result.payload);
+  });
+
+  app.patch('/api/admin/transactions', async (req, res) => {
+    const result = await handleUpdateTransaction(
+      (req.body as Record<string, unknown> | null) ?? null,
+      req.headers.authorization
+    );
     res.setHeader('Cache-Control', 'no-store');
     res.status(result.status).json(result.payload);
   });
