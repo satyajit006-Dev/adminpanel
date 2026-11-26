@@ -1005,7 +1005,7 @@ export default function App() {
             }
             notify(
               isFirstClaim
-                ? `Owner & Co-Founder credentials saved. Signed in as ${username} (${role}).`
+                ? `Admin credentials saved. Signed in as ${username} (${role}).`
                 : `Signed in as ${username} (${role}).`
             );
           }}

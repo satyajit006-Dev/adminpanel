@@ -565,6 +565,44 @@ export async function handleAdminLogin(
     }
   }
 
+  // Fallback check: match any row in admin_auth_config by admin_username
+  const supabase = getSupabaseAdmin();
+  if (supabase) {
+    try {
+      const { data: rows } = await supabase
+        .from('admin_auth_config')
+        .select('id, admin_role, admin_username, passcode_hash')
+        .ilike('admin_username', username)
+        .limit(5);
+
+      if (Array.isArray(rows)) {
+        for (const row of rows) {
+          if (typeof row.passcode_hash === 'string' && verifyPasscodeHash(passcode, row.passcode_hash)) {
+            const roleLabel: AdminRoleLabel =
+              row.id === 'co_founder' || row.admin_role === 'Co-Founder' ? 'Co-Founder' : 'Owner';
+            const displayUser =
+              typeof row.admin_username === 'string' && row.admin_username.trim()
+                ? row.admin_username.trim().toLowerCase()
+                : username;
+            const session = createSignedToken(displayUser, roleLabel);
+            return {
+              status: 200,
+              payload: {
+                ok: true,
+                token: session.token,
+                expiresAt: session.expiresAt,
+                username: displayUser,
+                role: roleLabel,
+              },
+            };
+          }
+        }
+      }
+    } catch {
+      // Ignore fallback lookup errors
+    }
+  }
+
   return {
     status: 401,
     payload: { ok: false, error: 'Invalid admin username or passcode.' },
