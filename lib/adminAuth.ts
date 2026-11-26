@@ -390,129 +390,28 @@ export function verifyAdminBearerToken(
 }
 
 export async function handleClaimAdminPasscode(
-  body: Record<string, unknown> | null
+  _body: Record<string, unknown> | null
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
-  const status = await getAuthStatus();
-  if (status.ownerClaimed || status.cofounderClaimed) {
-    return {
-      status: 409,
-      payload: {
-        ok: false,
-        error: 'Admin credentials have already been claimed. Use sign-in instead.',
-      },
-    };
-  }
-
-  const ownerUsername = normalizeUsername(body?.ownerUsername ?? body?.username);
-  const ownerPasscode =
-    typeof (body?.ownerPasscode ?? body?.passcode) === 'string'
-      ? String(body?.ownerPasscode ?? body?.passcode).trim()
-      : '';
-
-  if (!isValidUsername(ownerUsername)) {
-    return {
-      status: 400,
-      payload: {
-        ok: false,
-        error:
-          'Owner username must be 3–64 characters using letters, numbers, dots, underscores, hyphens, or @.',
-      },
-    };
-  }
-  if (ownerPasscode.length < 8 || ownerPasscode.length > 128) {
-    return {
-      status: 400,
-      payload: {
-        ok: false,
-        error: 'Owner passcode must be between 8 and 128 characters.',
-      },
-    };
-  }
-
-  const cofounderUsername = normalizeUsername(body?.cofounderUsername);
-  const cofounderPasscode =
-    typeof body?.cofounderPasscode === 'string' ? body.cofounderPasscode.trim() : '';
-
-  const hasCofounderInput = Boolean(cofounderUsername || cofounderPasscode);
-  if (hasCofounderInput) {
-    if (!isValidUsername(cofounderUsername)) {
-      return {
-        status: 400,
-        payload: {
-          ok: false,
-          error:
-            'Co-Founder username must be 3–64 characters using letters, numbers, dots, underscores, hyphens, or @.',
-        },
-      };
-    }
-    if (cofounderPasscode.length < 8 || cofounderPasscode.length > 128) {
-      return {
-        status: 400,
-        payload: {
-          ok: false,
-          error: 'Co-Founder passcode must be between 8 and 128 characters.',
-        },
-      };
-    }
-    if (cofounderUsername === ownerUsername) {
-      return {
-        status: 400,
-        payload: {
-          ok: false,
-          error: 'Owner and Co-Founder must have different usernames.',
-        },
-      };
-    }
-    if (timingSafeCompareText(ownerPasscode, cofounderPasscode)) {
-      return {
-        status: 400,
-        payload: {
-          ok: false,
-          error: 'Owner and Co-Founder must use two different passcodes.',
-        },
-      };
-    }
-  }
-
-  const saveOwner = await upsertRoleCredential('owner', ownerUsername, hashPasscode(ownerPasscode));
-  if (!saveOwner.ok) {
-    return {
-      status: 502,
-      payload: { ok: false, error: saveOwner.error ?? 'Failed to save Owner credentials.' },
-    };
-  }
-
-  if (hasCofounderInput) {
-    const saveCofounder = await upsertRoleCredential(
-      'co_founder',
-      cofounderUsername,
-      hashPasscode(cofounderPasscode)
-    );
-    if (!saveCofounder.ok) {
-      return {
-        status: 502,
-        payload: {
-          ok: false,
-          error: saveCofounder.error ?? 'Failed to save Co-Founder credentials.',
-        },
-      };
-    }
-  }
-
-  const session = createSignedToken(ownerUsername, 'Owner');
   return {
-    status: 201,
+    status: 403,
     payload: {
-      ok: true,
-      token: session.token,
-      expiresAt: session.expiresAt,
-      username: ownerUsername,
-      role: 'Owner',
-      authClaimed: true,
-      ownerClaimed: true,
-      cofounderClaimed: hasCofounderInput,
+      ok: false,
+      error: 'Admin self-registration is disabled. Only preregistered admins can sign in.',
     },
   };
+}
+
+function verifyStoredSecret(passcode: string, storedSecret: string): boolean {
+  const trimmed = storedSecret.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith('scrypt$')) {
+    return verifyPasscodeHash(passcode, trimmed);
+  }
+  if (/^[a-f0-9]{64}$/i.test(trimmed)) {
+    const shaHex = crypto.createHash('sha256').update(passcode).digest('hex');
+    return timingSafeCompareText(shaHex.toLowerCase(), trimmed.toLowerCase());
+  }
+  return timingSafeCompareText(passcode, trimmed);
 }
 
 export async function handleAdminLogin(
@@ -524,7 +423,7 @@ export async function handleAdminLogin(
   if (!username || !passcode) {
     return {
       status: 400,
-      payload: { ok: false, error: 'Admin username and passcode are required.' },
+      payload: { ok: false, error: 'Username and passcode are required.' },
     };
   }
 
@@ -532,17 +431,6 @@ export async function handleAdminLogin(
     readDbCredential('owner'),
     readDbCredential('co_founder'),
   ]);
-
-  if (!ownerCred && !cofounderCred) {
-    return {
-      status: 403,
-      payload: {
-        ok: false,
-        needsSetup: true,
-        error: 'Admin credentials have not been set up yet. Complete first-run setup.',
-      },
-    };
-  }
 
   const candidates = [ownerCred, cofounderCred].filter(
     (c): c is StoredAdminCredential => Boolean(c)
@@ -565,25 +453,71 @@ export async function handleAdminLogin(
     }
   }
 
-  // Fallback check: match any row in admin_auth_config by admin_username
+  let hasAnyConfiguredSource = candidates.length > 0;
   const supabase = getSupabaseAdmin();
+
   if (supabase) {
+    // 1. Check any matching row in admin_auth_config by admin_username
     try {
-      const { data: rows } = await supabase
+      const { data: authRows, error: authErr } = await supabase
         .from('admin_auth_config')
         .select('id, admin_role, admin_username, passcode_hash')
-        .ilike('admin_username', username)
-        .limit(5);
+        .limit(20);
 
-      if (Array.isArray(rows)) {
-        for (const row of rows) {
-          if (typeof row.passcode_hash === 'string' && verifyPasscodeHash(passcode, row.passcode_hash)) {
+      if (!authErr && Array.isArray(authRows) && authRows.length > 0) {
+        hasAnyConfiguredSource = true;
+        for (const row of authRows) {
+          const rowUser = normalizeUsername(row.admin_username);
+          if (
+            rowUser &&
+            timingSafeCompareText(rowUser, username) &&
+            typeof row.passcode_hash === 'string' &&
+            verifyPasscodeHash(passcode, row.passcode_hash)
+          ) {
             const roleLabel: AdminRoleLabel =
               row.id === 'co_founder' || row.admin_role === 'Co-Founder' ? 'Co-Founder' : 'Owner';
-            const displayUser =
-              typeof row.admin_username === 'string' && row.admin_username.trim()
-                ? row.admin_username.trim().toLowerCase()
-                : username;
+            const session = createSignedToken(rowUser, roleLabel);
+            return {
+              status: 200,
+              payload: {
+                ok: true,
+                token: session.token,
+                expiresAt: session.expiresAt,
+                username: rowUser,
+                role: roleLabel,
+              },
+            };
+          }
+        }
+      }
+    } catch {
+      // Table may not exist in pre-existing database
+    }
+
+    // 2. Check common existing Supabase admin tables (admin_users, admins)
+    for (const table of ['admin_users', 'admins'] as const) {
+      try {
+        const { data: rows, error: tableErr } = await supabase.from(table).select('*').limit(50);
+        if (tableErr || !Array.isArray(rows) || rows.length === 0) continue;
+
+        hasAnyConfiguredSource = true;
+        for (const row of rows as Array<Record<string, unknown>>) {
+          const candidateNames = [row.username, row.admin_username, row.email]
+            .map((v) => normalizeUsername(v))
+            .filter(Boolean);
+
+          if (!candidateNames.some((n) => timingSafeCompareText(n, username))) continue;
+
+          const secretField = [row.passcode_hash, row.password_hash, row.passcode]
+            .find((v): v is string => typeof v === 'string' && v.trim().length > 0);
+
+          if (secretField && verifyStoredSecret(passcode, secretField)) {
+            const rawRole = String(row.role ?? row.admin_role ?? '').toLowerCase();
+            const roleLabel: AdminRoleLabel =
+              rawRole.includes('co_founder') || rawRole.includes('co-founder') || rawRole.includes('cofounder')
+                ? 'Co-Founder'
+                : 'Owner';
+            const displayUser = candidateNames[0] || username;
             const session = createSignedToken(displayUser, roleLabel);
             return {
               status: 200,
@@ -597,15 +531,26 @@ export async function handleAdminLogin(
             };
           }
         }
+      } catch {
+        // Table may not exist in Supabase
       }
-    } catch {
-      // Ignore fallback lookup errors
     }
+  }
+
+  if (!hasAnyConfiguredSource) {
+    return {
+      status: 401,
+      payload: {
+        ok: false,
+        error:
+          'No preregistered admin credentials found on the server. Configure ADMIN_OWNER_USERNAME & ADMIN_OWNER_PASSCODE (and optional ADMIN_COFOUNDER_USERNAME & ADMIN_COFOUNDER_PASSCODE) in environment variables, or add rows in Supabase.',
+      },
+    };
   }
 
   return {
     status: 401,
-    payload: { ok: false, error: 'Invalid admin username or passcode.' },
+    payload: { ok: false, error: 'Invalid username or passcode.' },
   };
 }
 

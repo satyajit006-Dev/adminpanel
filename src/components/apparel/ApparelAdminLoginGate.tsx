@@ -7,12 +7,7 @@ interface ApparelAdminLoginGateProps {
   isDark: boolean;
   onToggleTheme: () => void;
   backendConfig: BackendWebsiteConfig;
-  onAuthenticated: (
-    token: string,
-    username: string,
-    role: AdminRoleLabel,
-    isFirstClaim: boolean
-  ) => void;
+  onAuthenticated: (token: string, username: string, role: AdminRoleLabel) => void;
   onRefreshConfig: () => Promise<void>;
 }
 
@@ -26,22 +21,9 @@ export function ApparelAdminLoginGate({
 }: ApparelAdminLoginGateProps) {
   const [username, setUsername] = useState('');
   const [passcode, setPasscode] = useState('');
-  const [confirmPasscode, setConfirmPasscode] = useState('');
   const [showPasscode, setShowPasscode] = useState(false);
-  const [showConfirmPasscode, setShowConfirmPasscode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-
-  const isClaimFlow =
-    backendConfig.checked &&
-    !backendConfig.configError &&
-    !backendConfig.authClaimed &&
-    !backendConfig.ownerClaimed &&
-    !backendConfig.cofounderClaimed &&
-    !backendConfig.usingEnvPasscode;
-
-  const passcodeMismatch =
-    isClaimFlow && confirmPasscode.length > 0 && passcode.trim() !== confirmPasscode.trim();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,62 +42,6 @@ export function ApparelAdminLoginGate({
       );
       return;
     }
-
-    if (isClaimFlow) {
-      if (cleanedPasscode.length < 8) {
-        setError('Passcode must be at least 8 characters.');
-        return;
-      }
-      if (cleanedPasscode !== confirmPasscode.trim()) {
-        setError('Passcodes do not match. Use the eye icon to verify.');
-        return;
-      }
-
-      setSubmitting(true);
-      try {
-        const res = await fetch('/api/admin/auth/claim', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            username: cleanedUsername,
-            passcode: cleanedPasscode,
-          }),
-        });
-        const contentType = res.headers.get('content-type') ?? '';
-        if (!contentType.includes('application/json')) {
-          setError(`Authentication endpoint unavailable (HTTP ${res.status}).`);
-          return;
-        }
-        const data = (await res.json()) as {
-          ok?: boolean;
-          token?: string;
-          username?: string;
-          role?: AdminRoleLabel;
-          error?: string;
-        };
-        if (!res.ok || !data.ok || !data.token) {
-          setError(data.error ?? `Setup failed (HTTP ${res.status}).`);
-          return;
-        }
-
-        setPasscode('');
-        setConfirmPasscode('');
-        setShowPasscode(false);
-        setShowConfirmPasscode(false);
-        onAuthenticated(
-          data.token,
-          data.username || cleanedUsername,
-          data.role === 'Co-Founder' ? 'Co-Founder' : 'Owner',
-          true
-        );
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unable to reach authentication server.');
-      } finally {
-        setSubmitting(false);
-      }
-      return;
-    }
-
     if (!cleanedPasscode) {
       setError('Enter your passcode.');
       return;
@@ -143,14 +69,10 @@ export function ApparelAdminLoginGate({
         username?: string;
         role?: AdminRoleLabel;
         error?: string;
-        needsSetup?: boolean;
       };
 
       if (!res.ok || !data.ok || !data.token) {
         setError(data.error ?? `Authentication failed (HTTP ${res.status}).`);
-        if (data.needsSetup) {
-          await onRefreshConfig();
-        }
         return;
       }
 
@@ -158,7 +80,7 @@ export function ApparelAdminLoginGate({
       const authenticatedRole: AdminRoleLabel = data.role === 'Co-Founder' ? 'Co-Founder' : 'Owner';
       setPasscode('');
       setShowPasscode(false);
-      onAuthenticated(data.token, authenticatedUser, authenticatedRole, false);
+      onAuthenticated(data.token, authenticatedUser, authenticatedRole);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to reach authentication server.');
     } finally {
@@ -197,26 +119,14 @@ export function ApparelAdminLoginGate({
             <div className="flex items-center gap-2 text-accent-text">
               <KeyRound className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="font-mono text-xs font-semibold uppercase tracking-wider">
-                {!backendConfig.checked
-                  ? 'Connecting'
-                  : isClaimFlow
-                    ? 'Initial Admin Setup'
-                    : 'Admin Sign In'}
+                Admin Sign In
               </span>
             </div>
             <h1 className="font-display text-xl font-semibold text-ink">
-              {!backendConfig.checked
-                ? 'Checking backend security...'
-                : isClaimFlow
-                  ? 'Create admin login'
-                  : 'Sign in to Admin Panel'}
+              Sign in to Admin Panel
             </h1>
             <p className="text-xs leading-relaxed text-ink-secondary">
-              {!backendConfig.checked
-                ? 'Verifying backend session requirements.'
-                : isClaimFlow
-                  ? 'Set a username and passcode to unlock the Admin Panel. Additional passcodes can be configured anytime in Staff & Permissions.'
-                  : 'Enter your username and passcode to access the Admin Panel.'}
+              Enter your preregistered username and passcode to access the Admin Panel.
             </p>
           </div>
 
@@ -274,11 +184,11 @@ export function ApparelAdminLoginGate({
                 <input
                   id="admin-passcode-input"
                   type={showPasscode ? 'text' : 'password'}
-                  autoComplete={isClaimFlow ? 'new-password' : 'current-password'}
+                  autoComplete="current-password"
                   required
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
-                  placeholder={isClaimFlow ? 'Minimum 8 characters' : 'Enter your passcode'}
+                  placeholder="Enter your passcode"
                   className="w-full rounded-lg border border-line bg-surface py-2.5 pl-3.5 pr-10 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
                 />
                 <button
@@ -297,47 +207,6 @@ export function ApparelAdminLoginGate({
               </div>
             </div>
 
-            {isClaimFlow && (
-              <div>
-                <label
-                  htmlFor="admin-confirm-passcode-input"
-                  className="block text-xs font-medium text-ink-secondary"
-                >
-                  Confirm Passcode *
-                </label>
-                <div className="relative mt-1.5">
-                  <input
-                    id="admin-confirm-passcode-input"
-                    type={showConfirmPasscode ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    required
-                    value={confirmPasscode}
-                    onChange={(e) => setConfirmPasscode(e.target.value)}
-                    placeholder="Re-enter your passcode"
-                    className="w-full rounded-lg border border-line bg-surface py-2.5 pl-3.5 pr-10 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPasscode((prev) => !prev)}
-                    aria-label={showConfirmPasscode ? 'Hide confirm passcode' : 'Show confirm passcode'}
-                    title={showConfirmPasscode ? 'Hide confirm passcode' : 'Show confirm passcode'}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-ink-muted hover:bg-hover hover:text-ink transition-colors"
-                  >
-                    {showConfirmPasscode ? (
-                      <EyeOff className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <Eye className="h-4 w-4" aria-hidden="true" />
-                    )}
-                  </button>
-                </div>
-                {passcodeMismatch && (
-                  <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-400">
-                    Passcodes do not match yet.
-                  </p>
-                )}
-              </div>
-            )}
-
             {error && (
               <p className="text-xs font-medium text-red-700 dark:text-red-400" role="alert">
                 {error}
@@ -346,17 +215,11 @@ export function ApparelAdminLoginGate({
 
             <button
               type="submit"
-              disabled={submitting || !backendConfig.checked}
+              disabled={submitting}
               className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-xs font-semibold text-accent-ink hover:bg-accent-hover disabled:opacity-60 transition-colors whitespace-nowrap"
             >
               <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>
-                {submitting
-                  ? 'Authenticating...'
-                  : isClaimFlow
-                    ? 'Save & Enter Admin Panel'
-                    : 'Sign In to Admin Panel'}
-              </span>
+              <span>{submitting ? 'Authenticating...' : 'Sign In to Admin Panel'}</span>
             </button>
           </form>
         </div>

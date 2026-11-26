@@ -995,7 +995,7 @@ export default function App() {
           onToggleTheme={() => setIsDark((p) => !p)}
           backendConfig={backendConfig}
           onRefreshConfig={refreshBackendConfig}
-          onAuthenticated={(token, username, role, isFirstClaim) => {
+          onAuthenticated={(token, username, role) => {
             setAdminToken(token);
             setAdminUsername(username);
             setAdminRole(role);
@@ -1003,11 +1003,7 @@ export default function App() {
             if (backendConfig.supabaseConfigured) {
               void syncAllFromSupabase(token, false);
             }
-            notify(
-              isFirstClaim
-                ? `Admin credentials saved. Signed in as ${username} (${role}).`
-                : `Signed in as ${username} (${role}).`
-            );
+            notify(`Signed in as ${username} (${role}).`);
           }}
         />
         <Toast toast={toast} onDismiss={() => setToast(null)} />
