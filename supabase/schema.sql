@@ -205,13 +205,21 @@ create table if not exists public.admin_session_history (
   username text not null,
   role text not null default 'Owner',
   event_type text not null check (event_type in ('login', 'logout')),
+  device_info text not null default 'Web Browser',
   occurred_at timestamptz not null default now()
 );
+
+alter table public.admin_session_history
+  add column if not exists device_info text not null default 'Web Browser';
 
 create index if not exists idx_admin_session_history_occurred_at
   on public.admin_session_history (occurred_at desc);
 
 alter table public.admin_session_history enable row level security;
+
+grant usage on schema public to service_role;
+grant select, insert on table public.admin_session_history to service_role;
+revoke all on table public.admin_session_history from anon, authenticated;
 
 create or replace function public.prevent_admin_session_history_mutation()
 returns trigger

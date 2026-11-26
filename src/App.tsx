@@ -234,6 +234,7 @@ export default function App() {
   );
   const [sessionHistoryLoading, setSessionHistoryLoading] = useState(false);
   const [sessionHistoryTableMissing, setSessionHistoryTableMissing] = useState(false);
+  const [sessionHistoryError, setSessionHistoryError] = useState<string | null>(null);
   const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
   const [backendConfig, setBackendConfig] = useState<BackendWebsiteConfig>({
     checked: false,
@@ -321,29 +322,59 @@ export default function App() {
       const activeToken = tokenOverride ?? adminToken;
       if (!activeToken) return;
       setSessionHistoryLoading(true);
+      setSessionHistoryError(null);
       try {
         const res = await fetch('/api/admin/session-history', {
           headers: { Authorization: `Bearer ${activeToken}` },
         });
         const contentType = res.headers.get('content-type') ?? '';
-        if (!res.ok || !contentType.includes('application/json')) return;
+        if (!contentType.includes('application/json')) {
+          setSessionHistoryError(
+            `Session history endpoint unavailable (HTTP ${res.status}). Make sure the latest code is deployed.`
+          );
+          return;
+        }
         const data = (await res.json()) as {
           ok?: boolean;
           tableMissing?: boolean;
+          dbError?: string;
+          error?: string;
           history?: AdminSessionHistoryEntry[];
         };
-        if (data.ok && Array.isArray(data.history)) {
+        if (res.status === 401) {
+          setAdminToken(null);
+          return;
+        }
+        if (!res.ok || !data.ok) {
+          setSessionHistoryError(data.error ?? `Failed to load history (HTTP ${res.status}).`);
+          return;
+        }
+        if (data.dbError) {
+          setSessionHistoryError(data.dbError);
+        }
+        if (Array.isArray(data.history)) {
           setSessionHistoryTableMissing(Boolean(data.tableMissing));
           setSessionHistory((prev) => mergeSessionHistory(prev, data.history ?? []));
         }
-      } catch {
-        // Keep local immutable history if offline
+      } catch (err) {
+        setSessionHistoryError(
+          err instanceof Error ? err.message : 'Unable to fetch login & logout history.'
+        );
       } finally {
         setSessionHistoryLoading(false);
       }
     },
     [adminToken]
   );
+
+  useEffect(() => {
+    if (!adminToken || activeRoute !== 'session_history') return;
+    void fetchSessionHistory(adminToken);
+    const intervalId = window.setInterval(() => {
+      void fetchSessionHistory(adminToken);
+    }, 15_000);
+    return () => window.clearInterval(intervalId);
+  }, [adminToken, activeRoute, fetchSessionHistory]);
 
   const pullProductsFromSupabase = useCallback(
     async (tokenOverride?: string) => {
@@ -480,6 +511,7 @@ export default function App() {
         if (!silent && loadedCounts.length > 0) {
           notify(`Synced from Supabase: ${loadedCounts.join(' · ')}`);
         }
+        void fetchSessionHistory(activeToken);
       } catch {
         if (!silent) {
           notify('Could not complete Supabase sync.');
@@ -1057,6 +1089,7 @@ export default function App() {
       void fetch('/api/admin/auth/logout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${activeToken}` },
+        keepalive: true,
       })
         .then(async (res) => {
           const contentType = res.headers.get('content-type') ?? '';
@@ -1408,6 +1441,7 @@ export default function App() {
               history={sessionHistory}
               loading={sessionHistoryLoading}
               tableMissing={sessionHistoryTableMissing}
+              loadError={sessionHistoryError}
               onRefresh={() => void fetchSessionHistory()}
             />
           )}

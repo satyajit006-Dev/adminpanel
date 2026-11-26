@@ -5,6 +5,7 @@ interface ApparelSessionHistoryViewProps {
   history: AdminSessionHistoryEntry[];
   loading: boolean;
   tableMissing?: boolean;
+  loadError?: string | null;
   onRefresh: () => void;
 }
 
@@ -33,14 +34,21 @@ export function ApparelSessionHistoryView({
   history,
   loading,
   tableMissing,
+  loadError,
   onRefresh,
 }: ApparelSessionHistoryViewProps) {
   return (
     <div className="space-y-4">
+      {loadError && (
+        <div className="rounded-xl border border-red-300/70 dark:border-red-900/60 bg-red-50/70 dark:bg-red-950/20 px-4 py-3 text-xs text-red-700 dark:text-red-400">
+          {loadError}
+        </div>
+      )}
+
       {tableMissing && (
         <div className="rounded-xl border border-amber-300/70 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/20 px-4 py-3 text-xs text-amber-900 dark:text-amber-300">
           Run the <code className="font-mono font-semibold">admin_session_history</code> SQL in
-          Supabase SQL Editor to persist records permanently across deployments.
+          Supabase SQL Editor to persist records across all devices and deployments.
         </div>
       )}
 
@@ -72,7 +80,7 @@ export function ApparelSessionHistoryView({
             <History className="mx-auto h-6 w-6 text-ink-muted" aria-hidden="true" />
             <p className="text-xs font-medium text-ink">No login or logout history yet</p>
             <p className="text-xs text-ink-muted">
-              Every login and logout will appear here permanently with date and time.
+              Every login and logout from any device will appear here permanently with date and time.
             </p>
           </div>
         ) : (
@@ -83,6 +91,7 @@ export function ApparelSessionHistoryView({
                   <th className="px-5 py-3">Action</th>
                   <th className="px-5 py-3">Username</th>
                   <th className="px-5 py-3">Role</th>
+                  <th className="px-5 py-3">Device</th>
                   <th className="px-5 py-3">Date</th>
                   <th className="px-5 py-3">Time</th>
                 </tr>
@@ -113,6 +122,9 @@ export function ApparelSessionHistoryView({
                       </td>
                       <td className="px-5 py-3.5 text-ink-secondary whitespace-nowrap">
                         {item.role}
+                      </td>
+                      <td className="px-5 py-3.5 text-ink-secondary whitespace-nowrap">
+                        {item.deviceInfo || 'Web Browser'}
                       </td>
                       <td className="px-5 py-3.5 font-mono text-ink whitespace-nowrap">
                         {formatDatePart(item.occurredAt)}

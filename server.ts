@@ -54,15 +54,20 @@ async function startServer() {
   });
 
   app.post('/api/admin/auth/login', async (req, res) => {
+    const userAgent =
+      typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
     const result = await handleAdminLogin(
-      (req.body as Record<string, unknown> | null) ?? null
+      (req.body as Record<string, unknown> | null) ?? null,
+      userAgent
     );
     res.setHeader('Cache-Control', 'no-store');
     res.status(result.status).json(result.payload);
   });
 
   app.post('/api/admin/auth/logout', async (req, res) => {
-    const result = await handleAdminLogout(req.headers.authorization);
+    const userAgent =
+      typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
+    const result = await handleAdminLogout(req.headers.authorization, userAgent);
     res.setHeader('Cache-Control', 'no-store');
     res.status(result.status).json(result.payload);
   });

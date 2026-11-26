@@ -25,21 +25,49 @@ export interface AdminSessionHistoryEntry {
   username: string;
   role: AdminRoleLabel;
   eventType: 'login' | 'logout';
+  deviceInfo?: string;
   occurredAt: string;
 }
 
 const inMemorySessionHistory: AdminSessionHistoryEntry[] = [];
+let lastSessionInsertError: string | null = null;
+
+function parseDeviceLabel(rawUserAgent?: string): string {
+  const ua = typeof rawUserAgent === 'string' ? rawUserAgent.trim() : '';
+  if (!ua) return 'Web Browser';
+
+  let os = 'Desktop';
+  if (/iphone/i.test(ua)) os = 'iPhone';
+  else if (/ipad/i.test(ua)) os = 'iPad';
+  else if (/android/i.test(ua)) os = 'Android';
+  else if (/windows/i.test(ua)) os = 'Windows';
+  else if (/mac os x|macintosh/i.test(ua)) os = 'Mac';
+  else if (/linux/i.test(ua)) os = 'Linux';
+
+  let browser = 'Browser';
+  if (/edg\//i.test(ua)) browser = 'Edge';
+  else if (/opr\/|opera/i.test(ua)) browser = 'Opera';
+  else if (/chrome|crios/i.test(ua)) browser = 'Chrome';
+  else if (/firefox|fxios/i.test(ua)) browser = 'Firefox';
+  else if (/safari/i.test(ua)) browser = 'Safari';
+  else if (/curl/i.test(ua)) browser = 'API Client';
+
+  return `${browser} · ${os}`;
+}
 
 async function recordAdminSessionEvent(params: {
   username: string;
   role: AdminRoleLabel;
   eventType: 'login' | 'logout';
+  userAgent?: string;
 }): Promise<AdminSessionHistoryEntry> {
+  const deviceInfo = parseDeviceLabel(params.userAgent);
   const entry: AdminSessionHistoryEntry = {
     id: `AUTH-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
     username: params.username,
     role: params.role,
     eventType: params.eventType,
+    deviceInfo,
     occurredAt: new Date().toISOString(),
   };
 
@@ -51,15 +79,33 @@ async function recordAdminSessionEvent(params: {
   const supabase = getSupabaseAdmin();
   if (supabase) {
     try {
-      await supabase.from('admin_session_history').insert({
+      let { error } = await supabase.from('admin_session_history').insert({
         id: entry.id,
         username: entry.username,
         role: entry.role,
         event_type: entry.eventType,
+        device_info: entry.deviceInfo,
         occurred_at: entry.occurredAt,
       });
-    } catch {
-      // Keep in-memory audit record if Supabase table is not created yet
+      if (error && (error.code === '42703' || error.code === 'PGRST204' || /device_info/i.test(error.message))) {
+        const retry = await supabase.from('admin_session_history').insert({
+          id: entry.id,
+          username: entry.username,
+          role: entry.role,
+          event_type: entry.eventType,
+          occurred_at: entry.occurredAt,
+        });
+        error = retry.error;
+      }
+      if (error) {
+        lastSessionInsertError = `${error.code ?? 'DB'}: ${error.message}`;
+        console.error('[admin_session_history insert]', lastSessionInsertError);
+      } else {
+        lastSessionInsertError = null;
+      }
+    } catch (err) {
+      lastSessionInsertError = err instanceof Error ? err.message : 'Insert exception';
+      console.error('[admin_session_history insert exception]', lastSessionInsertError);
     }
   }
 
@@ -461,7 +507,8 @@ function verifyStoredSecret(passcode: string, storedSecret: string): boolean {
 }
 
 export async function handleAdminLogin(
-  body: Record<string, unknown> | null
+  body: Record<string, unknown> | null,
+  userAgent?: string
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
   const username = normalizeUsername(body?.username);
   const passcode = typeof body?.passcode === 'string' ? body.passcode.trim() : '';
@@ -490,6 +537,7 @@ export async function handleAdminLogin(
         username: displayUser,
         role: cred.roleLabel,
         eventType: 'login',
+        userAgent,
       });
       return {
         status: 200,
@@ -533,6 +581,7 @@ export async function handleAdminLogin(
               username: rowUser,
               role: roleLabel,
               eventType: 'login',
+              userAgent,
             });
             return {
               status: 200,
@@ -581,6 +630,7 @@ export async function handleAdminLogin(
               username: displayUser,
               role: roleLabel,
               eventType: 'login',
+              userAgent,
             });
             return {
               status: 200,
@@ -751,7 +801,8 @@ export async function handleSaveAdminCredential(
 }
 
 export async function handleAdminLogout(
-  authorizationHeader: string | undefined
+  authorizationHeader: string | undefined,
+  userAgent?: string
 ): Promise<{ status: number; payload: Record<string, unknown> }> {
   const auth = verifyAdminBearerToken(authorizationHeader);
   if (!auth.ok) {
@@ -764,6 +815,7 @@ export async function handleAdminLogout(
     username,
     role,
     eventType: 'logout',
+    userAgent,
   });
 
   return {
@@ -789,21 +841,27 @@ export async function handleListSessionHistory(
   }
 
   let tableMissing = false;
+  let dbError: string | undefined;
   const supabase = getSupabaseAdmin();
   if (supabase) {
     try {
       const { data, error } = await supabase
         .from('admin_session_history')
-        .select('id, username, role, event_type, occurred_at')
+        .select('*')
         .order('occurred_at', { ascending: false })
-        .limit(250);
+        .limit(500);
 
       if (error) {
         if (error.code === '42P01' || error.code === 'PGRST205') {
           tableMissing = true;
+        } else if (error.code === '42501' || /permission denied/i.test(error.message)) {
+          dbError =
+            'Supabase permission denied for admin_session_history. Run: grant select, insert on table public.admin_session_history to service_role; in Supabase SQL Editor.';
+        } else {
+          dbError = error.message;
         }
       } else if (Array.isArray(data)) {
-        for (const row of data) {
+        for (const row of data as Array<Record<string, unknown>>) {
           const id = typeof row.id === 'string' ? row.id : '';
           if (!id) continue;
           byId.set(id, {
@@ -811,13 +869,17 @@ export async function handleListSessionHistory(
             username: typeof row.username === 'string' ? row.username : 'admin',
             role: row.role === 'Co-Founder' ? 'Co-Founder' : 'Owner',
             eventType: row.event_type === 'logout' ? 'logout' : 'login',
+            deviceInfo:
+              typeof row.device_info === 'string' && row.device_info.trim()
+                ? row.device_info
+                : 'Web Browser',
             occurredAt:
               typeof row.occurred_at === 'string' ? row.occurred_at : new Date().toISOString(),
           });
         }
       }
-    } catch {
-      tableMissing = true;
+    } catch (err) {
+      dbError = err instanceof Error ? err.message : 'Failed to load session history from Supabase';
     }
   }
 
@@ -831,6 +893,7 @@ export async function handleListSessionHistory(
       ok: true,
       immutable: true,
       tableMissing,
+      ...(dbError || lastSessionInsertError ? { dbError: dbError ?? lastSessionInsertError } : {}),
       history,
     },
   };

@@ -11,7 +11,9 @@ export default async function handler(req: VercelNodeRequest, res: ServerRespons
   try {
     const authHeader =
       typeof req.headers?.authorization === 'string' ? req.headers.authorization : undefined;
-    const result = await handleAdminLogout(authHeader);
+    const userAgent =
+      typeof req.headers?.['user-agent'] === 'string' ? req.headers['user-agent'] : undefined;
+    const result = await handleAdminLogout(authHeader, userAgent);
     sendJson(res, result.status, result.payload);
   } catch (err) {
     sendJson(res, 500, {

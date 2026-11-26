@@ -197,6 +197,7 @@ export interface AdminSessionHistoryEntry {
   username: string;
   role: AdminRoleLabel;
   eventType: 'login' | 'logout';
+  deviceInfo?: string;
   occurredAt: string;
 }
 
