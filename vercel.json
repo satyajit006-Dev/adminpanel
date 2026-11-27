@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/admin/:path*",
+      "destination": "/api/admin?path=:path*"
+    },
+    {
+      "source": "/api/website/:path*",
+      "destination": "/api/website?path=:path*"
+    },
+    {
       "source": "/((?!api/|assets/).*)",
       "destination": "/index.html"
     }
