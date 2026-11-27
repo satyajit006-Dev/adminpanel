@@ -80,6 +80,7 @@ import {
   isOngoingOrder,
   ORDER_STATUS_LABELS,
 } from './utils/apparelFormatters';
+import { compressAvatarFile } from './utils/avatarUpload';
 
 const STORAGE_PREFIX = 'apparel_admin_v2_';
 
@@ -235,6 +236,10 @@ export default function App() {
   const [sessionHistoryTableMissing, setSessionHistoryTableMissing] = useState(false);
   const [sessionHistoryError, setSessionHistoryError] = useState<string | null>(null);
   const [revokingCofounder, setRevokingCofounder] = useState(false);
+  const [adminAvatars, setAdminAvatars] = useState<{ owner?: string; co_founder?: string }>(() =>
+    loadState('admin_avatars', {})
+  );
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [isSyncingCatalog, setIsSyncingCatalog] = useState(false);
   const [backendConfig, setBackendConfig] = useState<BackendWebsiteConfig>({
     checked: false,
@@ -730,6 +735,66 @@ export default function App() {
   useEffect(() => saveState('delivery_zones', deliveryZones), [deliveryZones]);
   useEffect(() => saveState('staff', staff), [staff]);
   useEffect(() => saveState('settings', settings), [settings]);
+  useEffect(() => saveState('admin_avatars', adminAvatars), [adminAvatars]);
+
+  const activeAdminRoleKey = adminRole === 'Co-Founder' ? 'co_founder' : 'owner';
+  const activeAdminAvatarUrl = adminAvatars[activeAdminRoleKey];
+
+  const handleUploadAdminAvatar = useCallback(
+    async (file: File) => {
+      setUploadingAvatar(true);
+      try {
+        const dataUrl = await compressAvatarFile(file);
+        let finalAvatarUrl = dataUrl;
+
+        if (adminToken && backendConfig.supabaseConfigured) {
+          try {
+            const res = await fetch('/api/website/upload-image', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${adminToken}`,
+              },
+              body: JSON.stringify({
+                dataUrl,
+                sku: `admin-dp-${activeAdminRoleKey}`,
+              }),
+            });
+            if (res.status === 401) {
+              clearEndedSession('Session ended. Please sign in again.');
+              return;
+            }
+            const contentType = res.headers.get('content-type') ?? '';
+            if (res.ok && contentType.includes('application/json')) {
+              const data = (await res.json()) as { ok?: boolean; publicUrl?: string };
+              if (data.ok && data.publicUrl) {
+                finalAvatarUrl = data.publicUrl;
+              }
+            }
+          } catch {
+            // Fall back cleanly to compressed local DP data URL
+          }
+        }
+
+        setAdminAvatars((prev) => ({ ...prev, [activeAdminRoleKey]: finalAvatarUrl }));
+        notify('Profile photo (DP) updated');
+      } catch (err) {
+        notify(err instanceof Error ? err.message : 'Failed to upload profile photo.');
+      } finally {
+        setUploadingAvatar(false);
+      }
+    },
+    [activeAdminRoleKey, adminToken, backendConfig.supabaseConfigured, clearEndedSession, notify]
+  );
+
+  const handleRemoveAdminAvatar = useCallback(() => {
+    setAdminAvatars((prev) => {
+      const next = { ...prev };
+      delete next[activeAdminRoleKey];
+      return next;
+    });
+    notify('Removed profile photo (DP)');
+  }, [activeAdminRoleKey, notify]);
 
   useEffect(() => {
     if (!toast) return;
@@ -1252,6 +1317,8 @@ export default function App() {
         brandName={settings.brandName}
         adminName={adminUsername || settings.adminName}
         adminEmail={adminRole ? `${adminRole} · ${settings.email || 'Admin Access'}` : settings.email}
+        adminAvatarUrl={activeAdminAvatarUrl}
+        onUploadAvatar={(file) => void handleUploadAdminAvatar(file)}
         onSignOut={handleSignOut}
       />
 
@@ -1260,7 +1327,6 @@ export default function App() {
           activeRoute={activeRoute}
           brandName={settings.brandName}
           isDark={isDark}
-          onToggleTheme={() => setIsDark((p) => !p)}
           themePreset={themePreset}
           onChangeThemePreset={(next) => {
             setThemePreset(next);
@@ -1295,7 +1361,6 @@ export default function App() {
           supabaseConfigured={backendConfig.supabaseConfigured}
           isSyncing={isSyncingCatalog}
           onSyncAll={() => void syncAllFromSupabase()}
-          onSignOut={handleSignOut}
         />
 
         <main className="flex-1 px-4 py-6 sm:px-8 sm:py-7 max-w-[1400px] w-full mx-auto">
@@ -1544,6 +1609,11 @@ export default function App() {
               themePreset={themePreset}
               isDark={isDark}
               currentAdminRole={adminRole}
+              adminDisplayName={adminUsername || settings.adminName}
+              adminAvatarUrl={activeAdminAvatarUrl}
+              uploadingAvatar={uploadingAvatar}
+              onUploadAdminAvatar={(file) => void handleUploadAdminAvatar(file)}
+              onRemoveAdminAvatar={handleRemoveAdminAvatar}
               onChangeThemePreset={(next) => {
                 setThemePreset(next);
                 notify(

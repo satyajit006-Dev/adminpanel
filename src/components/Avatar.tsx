@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getInitials } from '../utils/apparelFormatters';
+import { isSafeAvatarSrc } from '../utils/avatarUpload';
 
 interface AvatarProps {
   name: string;
@@ -16,10 +17,16 @@ const SIZE_CLASSES = {
 export function Avatar({ name, src, size = 'md' }: AvatarProps) {
   const [imgFailed, setImgFailed] = useState(false);
 
-  if (src && !imgFailed) {
+  useEffect(() => {
+    setImgFailed(false);
+  }, [src]);
+
+  const safeSrc = isSafeAvatarSrc(src) ? src : undefined;
+
+  if (safeSrc && !imgFailed) {
     return (
       <img
-        src={src}
+        src={safeSrc}
         alt={name}
         referrerPolicy="no-referrer"
         onError={() => setImgFailed(true)}

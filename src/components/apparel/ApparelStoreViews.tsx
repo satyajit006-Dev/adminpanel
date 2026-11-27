@@ -1,4 +1,5 @@
 import {
+  Camera,
   Check,
   Eye,
   EyeOff,
@@ -26,6 +27,7 @@ import type {
 } from '../../types/apparel';
 import { formatInr, getNowTimestamp } from '../../utils/apparelFormatters';
 import { THEME_PRESETS } from '../../utils/themes';
+import { Avatar } from '../Avatar';
 
 export function ApparelProductsView({
   products,
@@ -1226,6 +1228,11 @@ export function ApparelSettingsView({
   themePreset,
   isDark,
   currentAdminRole,
+  adminDisplayName,
+  adminAvatarUrl,
+  uploadingAvatar = false,
+  onUploadAdminAvatar,
+  onRemoveAdminAvatar,
   onChangeThemePreset,
   onToggleDark,
   onSaveSettings,
@@ -1235,6 +1242,11 @@ export function ApparelSettingsView({
   themePreset: ThemePreset;
   isDark: boolean;
   currentAdminRole?: AdminRoleLabel | null;
+  adminDisplayName?: string;
+  adminAvatarUrl?: string;
+  uploadingAvatar?: boolean;
+  onUploadAdminAvatar?: (file: File) => void;
+  onRemoveAdminAvatar?: () => void;
   onChangeThemePreset: (preset: ThemePreset) => void;
   onToggleDark: () => void;
   onSaveSettings: (next: BusinessSettings) => void;
@@ -1253,8 +1265,57 @@ export function ApparelSettingsView({
     onSaveSettings(draft);
   };
 
+  const dpName = adminDisplayName?.trim() || draft.adminName?.trim() || 'Store Admin';
+
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* Admin Profile Photo (DP) */}
+      {onUploadAdminAvatar && (
+        <section className="rounded-xl border border-line bg-surface p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4 min-w-0">
+            <Avatar name={dpName} src={adminAvatarUrl} size="lg" />
+            <div className="min-w-0">
+              <h2 className="font-display text-base font-semibold text-ink">
+                Profile Photo (DP)
+              </h2>
+              <p className="mt-0.5 text-xs text-ink-muted truncate">
+                {dpName}
+                {currentAdminRole ? ` · ${currentAdminRole}` : ''} — shown in the admin sidebar.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-accent px-3.5 py-2 text-xs font-semibold text-accent-ink hover:bg-accent-hover transition-colors whitespace-nowrap">
+              <Camera className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>{uploadingAvatar ? 'Uploading...' : adminAvatarUrl ? 'Change Photo' : 'Upload Photo'}</span>
+              <input
+                type="file"
+                disabled={uploadingAvatar}
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="sr-only"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) onUploadAdminAvatar(file);
+                }}
+              />
+            </label>
+            {adminAvatarUrl && onRemoveAdminAvatar && (
+              <button
+                type="button"
+                disabled={uploadingAvatar}
+                onClick={onRemoveAdminAvatar}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>Remove</span>
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Admin Panel Theme & Appearance */}
       <section className="rounded-xl border border-line bg-surface p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

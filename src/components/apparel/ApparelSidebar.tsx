@@ -2,6 +2,7 @@ import {
   Ban,
   BarChart3,
   Boxes,
+  Camera,
   CheckCircle2,
   ClipboardList,
   FolderTree,
@@ -34,6 +35,8 @@ interface ApparelSidebarProps {
   brandName: string;
   adminName?: string;
   adminEmail?: string;
+  adminAvatarUrl?: string;
+  onUploadAvatar?: (file: File) => void;
   onSignOut: () => void;
 }
 
@@ -59,6 +62,8 @@ export function ApparelSidebar({
   brandName,
   adminName,
   adminEmail,
+  adminAvatarUrl,
+  onUploadAvatar,
   onSignOut,
 }: ApparelSidebarProps) {
   const operatorName = adminName?.trim() || 'Store Admin';
@@ -204,17 +209,41 @@ export function ApparelSidebar({
 
       {/* Operator Footer */}
       <div className="border-t border-sidebar-border px-4 py-3.5 shrink-0 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => handleSelect('settings')}
-          className="flex min-w-0 flex-1 items-center gap-3 text-left hover:opacity-90 transition-opacity"
-        >
-          <Avatar name={operatorName} size="sm" />
-          <div className="min-w-0">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          {onUploadAvatar ? (
+            <label
+              title="Upload profile photo (DP)"
+              className="group relative cursor-pointer shrink-0 rounded-full"
+            >
+              <Avatar name={operatorName} src={adminAvatarUrl} size="sm" />
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-ink shadow-xs transition-transform group-hover:scale-105">
+                <Camera className="h-2.5 w-2.5" aria-hidden="true" />
+              </span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="sr-only"
+                aria-label="Upload profile photo (DP)"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = '';
+                  if (file) onUploadAvatar(file);
+                }}
+              />
+            </label>
+          ) : (
+            <Avatar name={operatorName} src={adminAvatarUrl} size="sm" />
+          )}
+
+          <button
+            type="button"
+            onClick={() => handleSelect('settings')}
+            className="min-w-0 flex-1 text-left hover:opacity-90 transition-opacity"
+          >
             <p className="truncate text-xs font-semibold text-sidebar-ink">{operatorName}</p>
             <p className="truncate text-[11px] text-sidebar-muted">{operatorSub}</p>
-          </div>
-        </button>
+          </button>
+        </div>
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"

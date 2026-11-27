@@ -1,4 +1,4 @@
-import { ArrowUpDown, Download, KeyRound, Pencil, Search, Trash2, UserPlus, X } from 'lucide-react';
+import { ArrowUpDown, Camera, Download, KeyRound, Pencil, Search, Trash2, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type {
   AccountSegment,
@@ -16,6 +16,7 @@ import {
   formatNumber,
   getNowTimestamp,
 } from '../../utils/apparelFormatters';
+import { compressAvatarFile } from '../../utils/avatarUpload';
 import { Avatar } from '../Avatar';
 import { AccountStatusText, OrderStatusText } from './ApparelStatusText';
 
@@ -700,6 +701,49 @@ export function ApparelAccountDrawer({
               onSubmit={handleSave}
               className="space-y-4 border-t border-line pt-5"
             >
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-line-subtle bg-subtle/40 px-4 py-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <Avatar name={draft.fullName || 'User'} src={draft.avatarUrl} size="md" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-ink">Profile Photo (DP)</p>
+                    <p className="text-[11px] text-ink-muted truncate">
+                      Upload a photo for this user account
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink transition-colors whitespace-nowrap">
+                    <Camera className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span>{draft.avatarUrl ? 'Change' : 'Upload Photo'}</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      className="sr-only"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (!file) return;
+                        try {
+                          const dataUrl = await compressAvatarFile(file);
+                          setDraft((prev) => (prev ? { ...prev, avatarUrl: dataUrl } : prev));
+                        } catch {
+                          // ignore invalid file
+                        }
+                      }}
+                    />
+                  </label>
+                  {draft.avatarUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setDraft({ ...draft, avatarUrl: undefined })}
+                      className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink-muted hover:text-ink hover:bg-hover transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-ink-secondary">
@@ -1129,6 +1173,7 @@ export function ApparelCreateAccountModal({
   const [companyName, setCompanyName] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [tops, setTops] = useState('M');
   const [bottoms, setBottoms] = useState('32');
   const [footwear, setFootwear] = useState('EU 41');
@@ -1155,6 +1200,7 @@ export function ApparelCreateAccountModal({
       fullName: fullName.trim(),
       email: email.trim(),
       phone: phone.trim() || '—',
+      avatarUrl,
       segment,
       role,
       tier,
@@ -1180,6 +1226,7 @@ export function ApparelCreateAccountModal({
     setFullName('');
     setEmail('');
     setPhone('');
+    setAvatarUrl(undefined);
     setCompanyName('');
     setCity('');
     setCountry('');
@@ -1223,6 +1270,49 @@ export function ApparelCreateAccountModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-line-subtle bg-subtle/40 px-4 py-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar name={fullName || 'New User'} src={avatarUrl} size="md" />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-ink">Profile Photo (DP)</p>
+                <p className="text-[11px] text-ink-muted truncate">
+                  Optional JPG, PNG, or WebP photo
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink-secondary hover:bg-hover hover:text-ink transition-colors whitespace-nowrap">
+                <Camera className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span>{avatarUrl ? 'Change' : 'Upload Photo'}</span>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (!file) return;
+                    try {
+                      const dataUrl = await compressAvatarFile(file);
+                      setAvatarUrl(dataUrl);
+                    } catch {
+                      // ignore invalid file
+                    }
+                  }}
+                />
+              </label>
+              {avatarUrl && (
+                <button
+                  type="button"
+                  onClick={() => setAvatarUrl(undefined)}
+                  className="rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-ink-muted hover:text-ink hover:bg-hover transition-colors"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-ink-secondary">

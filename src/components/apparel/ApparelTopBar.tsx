@@ -1,12 +1,9 @@
 import {
   Bell,
   Check,
-  LogOut,
   Menu,
-  Moon,
   Palette,
   RefreshCw,
-  Sun,
   UploadCloud,
   UserPlus,
 } from 'lucide-react';
@@ -19,7 +16,6 @@ interface ApparelTopBarProps {
   activeRoute: ApparelRoute;
   brandName: string;
   isDark: boolean;
-  onToggleTheme: () => void;
   themePreset: ThemePreset;
   onChangeThemePreset: (preset: ThemePreset) => void;
   onOpenMobileMenu: () => void;
@@ -31,7 +27,6 @@ interface ApparelTopBarProps {
   supabaseConfigured?: boolean;
   isSyncing?: boolean;
   onSyncAll?: () => void;
-  onSignOut: () => void;
 }
 
 const ROUTE_TITLES: Record<ApparelRoute, string> = {
@@ -58,7 +53,6 @@ export function ApparelTopBar({
   activeRoute,
   brandName,
   isDark,
-  onToggleTheme,
   themePreset,
   onChangeThemePreset,
   onOpenMobileMenu,
@@ -70,7 +64,6 @@ export function ApparelTopBar({
   supabaseConfigured,
   isSyncing,
   onSyncAll,
-  onSignOut,
 }: ApparelTopBarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
@@ -292,26 +285,6 @@ export function ApparelTopBar({
             </>
           )}
         </div>
-
-        <button
-          type="button"
-          onClick={onToggleTheme}
-          aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-secondary hover:bg-hover hover:text-ink transition-colors"
-        >
-          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </button>
-
-        <button
-          type="button"
-          onClick={onSignOut}
-          aria-label="Sign out"
-          title="Sign out"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-surface text-ink-secondary hover:bg-hover hover:text-ink transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
       </div>
     </header>
   );
