@@ -4,6 +4,7 @@ import {
   getProductsTableName,
   getStorageBucketName,
   getSupabaseAdmin,
+  getSupabaseKeyRoleHint,
   getSupabaseOrigin,
   isSupabaseConfigured,
   parseSafeHttpUrl,
@@ -44,6 +45,23 @@ const SCHEMA_CACHE_TTL_MS = 60_000;
 const tableSchemaCache = new Map<string, TableSchemaInfo>();
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function formatSupabaseErrorHint(
+  tableName: string,
+  error: { code?: string; message: string }
+): string {
+  if (error.code === '42P01' || error.code === 'PGRST205') {
+    return `Table "${tableName}" does not exist in Supabase yet.`;
+  }
+  if (error.code === '42501' || /permission denied/i.test(error.message)) {
+    const keyRole = getSupabaseKeyRoleHint();
+    if (keyRole === 'anon' || keyRole === 'publishable') {
+      return `SUPABASE_SERVICE_ROLE_KEY is currently set to an "${keyRole}" key instead of your secret service_role key. Replace it in your environment variables with the Supabase service_role (or sb_secret_) key and redeploy.`;
+    }
+    return `permission denied for table "${tableName}". Ensure SUPABASE_SERVICE_ROLE_KEY uses the service_role key and run: grant usage on schema public to service_role; grant select, insert, update, delete on table public.${tableName} to service_role;`;
+  }
+  return error.message;
+}
 
 function isUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID_REGEX.test(value.trim());
@@ -429,6 +447,7 @@ export async function getWebsiteConfig() {
   return {
     serverConfigured: supabaseConfigured || Boolean(webhookUrl),
     supabaseConfigured,
+    supabaseKeyRole: getSupabaseKeyRoleHint(),
     tableName: getProductsTableName(),
     storageBucketConfigured: Boolean(getStorageBucketName()),
     targetOrigin: getSupabaseOrigin() ?? (webhookUrl ? webhookUrl.origin : null),
@@ -495,10 +514,7 @@ export async function handleListWebsiteProducts(
   }
 
   if (error) {
-    const hint =
-      error.code === '42P01' || error.code === 'PGRST205'
-        ? `Table "${tableName}" does not exist in Supabase yet.`
-        : error.message;
+    const hint = formatSupabaseErrorHint(tableName, error);
     return {
       status: 502,
       payload: {
@@ -742,10 +758,7 @@ export async function handleUpsertWebsiteProduct(
   }
 
   if (error) {
-    const hint =
-      error.code === '42P01' || error.code === 'PGRST205'
-        ? `Table "${tableName}" does not exist in Supabase yet.`
-        : error.message;
+    const hint = formatSupabaseErrorHint(tableName, error);
     return {
       status: 502,
       payload: {
@@ -835,7 +848,7 @@ export async function handleDeleteWebsiteProduct(
       status: 502,
       payload: {
         ok: false,
-        error: `Supabase delete failed: ${error.message}`,
+        error: `Supabase delete failed: ${formatSupabaseErrorHint(tableName, error)}`,
       },
     };
   }

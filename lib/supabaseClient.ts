@@ -21,6 +21,26 @@ export function parseSafeHttpUrl(rawUrl: string | undefined): URL | null {
   }
 }
 
+export function getSupabaseKeyRoleHint(): 'service_role' | 'anon' | 'publishable' | 'secret' | 'unknown' {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!key) return 'unknown';
+  if (key.startsWith('sb_publishable_')) return 'publishable';
+  if (key.startsWith('sb_secret_')) return 'secret';
+  const parts = key.split('.');
+  if (parts.length === 3 && parts[1]) {
+    try {
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as {
+        role?: string;
+      };
+      if (payload.role === 'anon') return 'anon';
+      if (payload.role === 'service_role') return 'service_role';
+    } catch {
+      return 'unknown';
+    }
+  }
+  return 'unknown';
+}
+
 export function isSupabaseConfigured(): boolean {
   const url = parseSafeHttpUrl(process.env.SUPABASE_URL);
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
