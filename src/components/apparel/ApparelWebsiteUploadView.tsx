@@ -225,7 +225,13 @@ export function ApparelWebsiteUploadView({
     setSku(editingProduct.sku);
     setSlug(editingProduct.slug ?? slugify(editingProduct.name));
     setSlugManuallyEdited(Boolean(editingProduct.slug));
-    setCategoryId(editingProduct.categoryId);
+    const matchedCategory =
+      categories.find((c) => c.id === editingProduct.categoryId) ??
+      categories.find(
+        (c) => c.name.toLowerCase() === (editingProduct.categoryName || '').toLowerCase()
+      ) ??
+      categories[0];
+    setCategoryId(matchedCategory?.id ?? editingProduct.categoryId);
     setPrice(String(editingProduct.price));
     setCompareAtPrice(
       editingProduct.compareAtPrice ? String(editingProduct.compareAtPrice) : ''

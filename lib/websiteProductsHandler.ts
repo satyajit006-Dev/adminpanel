@@ -33,6 +33,22 @@ export interface NormalizedProductPayload {
   syncedAt: string;
 }
 
+interface TableSchemaInfo {
+  columns: Set<string> | null;
+  idIsUuid: boolean;
+  categoryIdIsUuid: boolean;
+  fetchedAt: number;
+}
+
+const SCHEMA_CACHE_TTL_MS = 60_000;
+const tableSchemaCache = new Map<string, TableSchemaInfo>();
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUuid(value: unknown): value is string {
+  return typeof value === 'string' && UUID_REGEX.test(value.trim());
+}
+
 function isSafeImageRef(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   const trimmed = value.trim();
@@ -57,7 +73,129 @@ function slugify(value: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-function mapSupabaseRowToProduct(row: Record<string, unknown>): NormalizedProductPayload & {
+async function getProductsTableSchema(tableName: string): Promise<TableSchemaInfo> {
+  const origin = getSupabaseOrigin();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const cacheKey = `${origin ?? 'none'}::${tableName}`;
+  const cached = tableSchemaCache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < SCHEMA_CACHE_TTL_MS) {
+    return cached;
+  }
+
+  // 1. Inspect PostgREST OpenAPI spec (accurate even when table has 0 rows)
+  if (origin && serviceKey) {
+    try {
+      const res = await fetch(`${origin}/rest/v1/`, {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          Accept: 'application/openapi+json, application/json',
+        },
+        signal: AbortSignal.timeout(5_000),
+      });
+      if (res.ok) {
+        const spec = (await res.json()) as {
+          definitions?: Record<
+            string,
+            { properties?: Record<string, { type?: string; format?: string }> }
+          >;
+          components?: {
+            schemas?: Record<
+              string,
+              { properties?: Record<string, { type?: string; format?: string }> }
+            >;
+          };
+        };
+        const props =
+          spec.definitions?.[tableName]?.properties ??
+          spec.components?.schemas?.[tableName]?.properties;
+        if (props && typeof props === 'object') {
+          const columns = new Set(Object.keys(props));
+          const info: TableSchemaInfo = {
+            columns,
+            idIsUuid: props.id?.format === 'uuid',
+            categoryIdIsUuid: props.category_id?.format === 'uuid',
+            fetchedAt: Date.now(),
+          };
+          tableSchemaCache.set(cacheKey, info);
+          return info;
+        }
+      }
+    } catch {
+      // Fall through to row probe
+    }
+  }
+
+  // 2. Fallback: probe an existing row if available
+  const supabase = getSupabaseAdmin();
+  if (supabase) {
+    try {
+      const { data } = await supabase.from(tableName).select('*').limit(1);
+      if (Array.isArray(data) && data.length > 0 && data[0] && typeof data[0] === 'object') {
+        const row = data[0] as Record<string, unknown>;
+        const info: TableSchemaInfo = {
+          columns: new Set(Object.keys(row)),
+          idIsUuid: isUuid(row.id),
+          categoryIdIsUuid: isUuid(row.category_id),
+          fetchedAt: Date.now(),
+        };
+        tableSchemaCache.set(cacheKey, info);
+        return info;
+      }
+    } catch {
+      // Ignore probe failure
+    }
+  }
+
+  return {
+    columns: null,
+    idIsUuid: false,
+    categoryIdIsUuid: false,
+    fetchedAt: Date.now(),
+  };
+}
+
+async function fetchCategoryLookupMaps(): Promise<{
+  idToName: Map<string, string>;
+  nameToId: Map<string, string>;
+}> {
+  const idToName = new Map<string, string>();
+  const nameToId = new Map<string, string>();
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return { idToName, nameToId };
+
+  try {
+    const { data, error } = await supabase.from('categories').select('*').limit(200);
+    if (!error && Array.isArray(data)) {
+      for (const row of data as Array<Record<string, unknown>>) {
+        const id = typeof row.id === 'string' ? row.id.trim() : '';
+        const name =
+          typeof row.name === 'string'
+            ? row.name.trim()
+            : typeof row.title === 'string'
+              ? row.title.trim()
+              : '';
+        if (id && name) {
+          idToName.set(id, name);
+          nameToId.set(name.toLowerCase(), id);
+        }
+      }
+    }
+  } catch {
+    // categories table may not exist or have restricted access
+  }
+
+  return { idToName, nameToId };
+}
+
+function mapSupabaseRowToProduct(
+  row: Record<string, unknown>,
+  options?: {
+    categoryIdToName?: Map<string, string>;
+    fallbackSku?: string;
+    fallbackImages?: string[];
+  }
+): NormalizedProductPayload & {
   websiteSyncStatus: 'synced';
   lastSyncedAt: string;
 } {
@@ -78,16 +216,46 @@ function mapSupabaseRowToProduct(row: Record<string, unknown>): NormalizedProduc
       ? row.updated_at
       : typeof row.updatedAt === 'string'
         ? row.updatedAt
-        : new Date().toISOString();
+        : typeof row.created_at === 'string'
+          ? row.created_at
+          : typeof row.createdAt === 'string'
+            ? row.createdAt
+            : new Date().toISOString();
 
   const name = typeof row.name === 'string' ? row.name : 'Untitled Product';
-  const sku = typeof row.sku === 'string' ? row.sku : '';
+  const id =
+    typeof row.id === 'string' && row.id ? row.id : `prod-${Date.now()}`;
+  const rawSku = typeof row.sku === 'string' ? row.sku.trim() : '';
+  const deterministicSku = `PRD-${id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase() || 'ITEM'}`;
+  const sku = rawSku || options?.fallbackSku?.trim() || deterministicSku;
+
+  const rawCategoryId =
+    typeof row.category_id === 'string'
+      ? row.category_id
+      : typeof row.categoryId === 'string'
+        ? row.categoryId
+        : '';
+
+  const categoryName =
+    typeof row.category_name === 'string' && row.category_name.trim()
+      ? row.category_name.trim()
+      : typeof row.categoryName === 'string' && row.categoryName.trim()
+        ? row.categoryName.trim()
+        : typeof row.category === 'string' && row.category.trim()
+          ? row.category.trim()
+          : (rawCategoryId && options?.categoryIdToName?.get(rawCategoryId)) || 'Apparel';
+
   const isAvailable =
     typeof row.is_available === 'boolean'
       ? row.is_available
       : typeof row.isAvailable === 'boolean'
         ? row.isAvailable
-        : true;
+        : typeof row.is_active === 'boolean'
+          ? row.is_active
+          : typeof row.isActive === 'boolean'
+            ? row.isActive
+            : true;
+
   const published =
     typeof row.published_to_website === 'boolean'
       ? row.published_to_website
@@ -95,23 +263,27 @@ function mapSupabaseRowToProduct(row: Record<string, unknown>): NormalizedProduc
         ? row.publishedToWebsite
         : isAvailable;
 
+  const rowImages = strArr(row.images).filter(isSafeImageRef);
+  const singleImage =
+    typeof row.image_url === 'string' && isSafeImageRef(row.image_url)
+      ? [row.image_url.trim()]
+      : typeof row.imageUrl === 'string' && isSafeImageRef(row.imageUrl)
+        ? [row.imageUrl.trim()]
+        : [];
+  const images =
+    rowImages.length > 0
+      ? rowImages
+      : singleImage.length > 0
+        ? singleImage
+        : (options?.fallbackImages ?? []).filter(isSafeImageRef);
+
   return {
-    id: typeof row.id === 'string' && row.id ? row.id : `prod-${sku || Date.now()}`,
+    id,
     sku,
     name,
     slug: typeof row.slug === 'string' && row.slug ? row.slug : slugify(name),
-    categoryId:
-      typeof row.category_id === 'string'
-        ? row.category_id
-        : typeof row.categoryId === 'string'
-          ? row.categoryId
-          : 'cat-1',
-    categoryName:
-      typeof row.category_name === 'string'
-        ? row.category_name
-        : typeof row.categoryName === 'string'
-          ? row.categoryName
-          : 'Apparel',
+    categoryId: rawCategoryId || 'cat-1',
+    categoryName,
     price: num(row.price, 0),
     compareAtPrice: optNum(row.compare_at_price ?? row.compareAtPrice),
     fabric: typeof row.fabric === 'string' ? row.fabric : '—',
@@ -128,7 +300,10 @@ function mapSupabaseRowToProduct(row: Record<string, unknown>): NormalizedProduc
           ? row.sizesAvailable
           : 'XS–XL',
     colors: strArr(row.colors),
-    stockQuantity: Math.max(0, Math.floor(num(row.stock_quantity ?? row.stockQuantity, 0))),
+    stockQuantity: Math.max(
+      0,
+      Math.floor(num(row.stock_quantity ?? row.stockQuantity ?? row.stock, 0))
+    ),
     lowStockThreshold: Math.max(
       0,
       Math.floor(num(row.low_stock_threshold ?? row.lowStockThreshold, 6))
@@ -142,7 +317,7 @@ function mapSupabaseRowToProduct(row: Record<string, unknown>): NormalizedProduc
           : false,
     publishedToWebsite: published,
     description: typeof row.description === 'string' ? row.description : '',
-    images: strArr(row.images).filter(isSafeImageRef),
+    images,
     tags: strArr(row.tags),
     syncedAt: updatedAt,
     websiteSyncStatus: 'synced',
@@ -294,16 +469,35 @@ export async function handleListWebsiteProducts(
   }
 
   const tableName = getProductsTableName();
-  const { data, error } = await supabase
-    .from(tableName)
-    .select('*')
-    .order('updated_at', { ascending: false })
-    .limit(500);
+  const [schema, categoryLookup] = await Promise.all([
+    getProductsTableSchema(tableName),
+    fetchCategoryLookupMaps(),
+  ]);
+
+  const orderColumn = schema.columns
+    ? schema.columns.has('updated_at')
+      ? 'updated_at'
+      : schema.columns.has('created_at')
+        ? 'created_at'
+        : null
+    : 'created_at';
+
+  let query = supabase.from(tableName).select('*');
+  if (orderColumn) {
+    query = query.order(orderColumn, { ascending: false });
+  }
+  let { data, error } = await query.limit(500);
+
+  if (error && (error.code === '42703' || error.code === 'PGRST204')) {
+    const retry = await supabase.from(tableName).select('*').limit(500);
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     const hint =
-      error.code === '42P01'
-        ? `Table "${tableName}" does not exist in Supabase yet. Run supabase/schema.sql in your Supabase SQL Editor.`
+      error.code === '42P01' || error.code === 'PGRST205'
+        ? `Table "${tableName}" does not exist in Supabase yet.`
         : error.message;
     return {
       status: 502,
@@ -316,7 +510,9 @@ export async function handleListWebsiteProducts(
   }
 
   const products = (data ?? []).map((row) =>
-    mapSupabaseRowToProduct(row as Record<string, unknown>)
+    mapSupabaseRowToProduct(row as Record<string, unknown>, {
+      categoryIdToName: categoryLookup.idToName,
+    })
   );
 
   return {
@@ -344,7 +540,8 @@ export async function handleUpsertWebsiteProduct(
   }
 
   const name = typeof body.name === 'string' ? body.name.trim() : '';
-  const sku = typeof body.sku === 'string' ? body.sku.trim() : '';
+  const rawSku = typeof body.sku === 'string' ? body.sku.trim() : '';
+  const sku = rawSku || slugify(name).slice(0, 24).toUpperCase() || `SKU-${Date.now()}`;
   const price = Number(body.price);
   const stockQuantity = Number(body.stockQuantity);
 
@@ -354,10 +551,10 @@ export async function handleUpsertWebsiteProduct(
       payload: { ok: false, error: 'Product name is required (max 160 chars).' },
     };
   }
-  if (!sku || sku.length > 64) {
+  if (sku.length > 64) {
     return {
       status: 400,
-      payload: { ok: false, error: 'SKU is required (max 64 chars).' },
+      payload: { ok: false, error: 'SKU must be 64 characters or fewer.' },
     };
   }
   if (!Number.isFinite(price) || price < 0) {
@@ -454,40 +651,100 @@ export async function handleUpsertWebsiteProduct(
   }
 
   const tableName = getProductsTableName();
-  const dbRow = {
-    id: sanitizedPayload.id,
-    sku: sanitizedPayload.sku,
-    name: sanitizedPayload.name,
-    slug: sanitizedPayload.slug,
-    category_id: sanitizedPayload.categoryId,
-    category_name: sanitizedPayload.categoryName,
-    price: sanitizedPayload.price,
-    compare_at_price: sanitizedPayload.compareAtPrice ?? null,
-    fabric: sanitizedPayload.fabric,
-    care_instructions: sanitizedPayload.careInstructions ?? null,
-    sizes_available: sanitizedPayload.sizesAvailable,
-    colors: sanitizedPayload.colors,
-    stock_quantity: sanitizedPayload.stockQuantity,
-    low_stock_threshold: sanitizedPayload.lowStockThreshold,
-    is_available: sanitizedPayload.isAvailable,
-    is_bestseller: sanitizedPayload.isBestseller,
-    published_to_website: sanitizedPayload.publishedToWebsite,
-    description: sanitizedPayload.description,
-    images: sanitizedPayload.images,
-    tags: sanitizedPayload.tags,
-    updated_at: sanitizedPayload.syncedAt,
+  const [schema, categoryLookup] = await Promise.all([
+    getProductsTableSchema(tableName),
+    fetchCategoryLookupMaps(),
+  ]);
+
+  const resolvedCategoryUuid = isUuid(sanitizedPayload.categoryId)
+    ? sanitizedPayload.categoryId
+    : (categoryLookup.nameToId.get(sanitizedPayload.categoryName.toLowerCase()) ?? null);
+
+  const hasCol = (col: string) => (schema.columns ? schema.columns.has(col) : false);
+
+  const dbRow: Record<string, unknown> = {};
+
+  if (schema.columns) {
+    if (hasCol('id')) {
+      if (schema.idIsUuid) {
+        if (isUuid(sanitizedPayload.id)) {
+          dbRow.id = sanitizedPayload.id;
+        }
+      } else {
+        dbRow.id = sanitizedPayload.id;
+      }
+    }
+    if (hasCol('sku')) dbRow.sku = sanitizedPayload.sku;
+    if (hasCol('name')) dbRow.name = sanitizedPayload.name;
+    if (hasCol('slug')) dbRow.slug = sanitizedPayload.slug;
+    if (hasCol('category_id')) {
+      dbRow.category_id = schema.categoryIdIsUuid
+        ? resolvedCategoryUuid
+        : sanitizedPayload.categoryId;
+    }
+    if (hasCol('category_name')) dbRow.category_name = sanitizedPayload.categoryName;
+    if (hasCol('category')) dbRow.category = sanitizedPayload.categoryName;
+    if (hasCol('price')) dbRow.price = sanitizedPayload.price;
+    if (hasCol('compare_at_price')) dbRow.compare_at_price = sanitizedPayload.compareAtPrice ?? null;
+    if (hasCol('fabric')) dbRow.fabric = sanitizedPayload.fabric;
+    if (hasCol('care_instructions')) dbRow.care_instructions = sanitizedPayload.careInstructions ?? null;
+    if (hasCol('sizes_available')) dbRow.sizes_available = sanitizedPayload.sizesAvailable;
+    if (hasCol('colors')) dbRow.colors = sanitizedPayload.colors;
+    if (hasCol('stock_quantity')) dbRow.stock_quantity = sanitizedPayload.stockQuantity;
+    if (hasCol('stock')) dbRow.stock = sanitizedPayload.stockQuantity;
+    if (hasCol('low_stock_threshold')) dbRow.low_stock_threshold = sanitizedPayload.lowStockThreshold;
+    if (hasCol('is_available')) dbRow.is_available = sanitizedPayload.isAvailable;
+    if (hasCol('is_active')) dbRow.is_active = sanitizedPayload.isAvailable;
+    if (hasCol('is_bestseller')) dbRow.is_bestseller = sanitizedPayload.isBestseller;
+    if (hasCol('published_to_website')) dbRow.published_to_website = sanitizedPayload.publishedToWebsite;
+    if (hasCol('description')) dbRow.description = sanitizedPayload.description;
+    if (hasCol('images')) dbRow.images = sanitizedPayload.images;
+    if (hasCol('image_url')) dbRow.image_url = sanitizedPayload.images[0] ?? null;
+    if (hasCol('tags')) dbRow.tags = sanitizedPayload.tags;
+    if (hasCol('updated_at')) dbRow.updated_at = sanitizedPayload.syncedAt;
+  } else {
+    // Minimal safe payload if schema inspection was unavailable and table is empty
+    if (isUuid(sanitizedPayload.id)) {
+      dbRow.id = sanitizedPayload.id;
+    }
+    dbRow.name = sanitizedPayload.name;
+    dbRow.description = sanitizedPayload.description;
+    dbRow.price = sanitizedPayload.price;
+    dbRow.image_url = sanitizedPayload.images[0] ?? null;
+    dbRow.category = sanitizedPayload.categoryName;
+    dbRow.stock = sanitizedPayload.stockQuantity;
+    dbRow.is_active = sanitizedPayload.isAvailable;
+    if (resolvedCategoryUuid) {
+      dbRow.category_id = resolvedCategoryUuid;
+    }
+  }
+
+  const writeRow = async (rowPayload: Record<string, unknown>) => {
+    if (hasCol('sku')) {
+      return supabase.from(tableName).upsert(rowPayload, { onConflict: 'sku' }).select().single();
+    }
+    if (typeof rowPayload.id === 'string' && rowPayload.id) {
+      return supabase.from(tableName).upsert(rowPayload, { onConflict: 'id' }).select().single();
+    }
+    return supabase.from(tableName).insert(rowPayload).select().single();
   };
 
-  const { data, error } = await supabase
-    .from(tableName)
-    .upsert(dbRow, { onConflict: 'sku' })
-    .select()
-    .single();
+  let { data, error } = await writeRow(dbRow);
+
+  // Strip unknown columns automatically if PostgREST reports PGRST204
+  for (let attempt = 0; attempt < 5 && error?.code === 'PGRST204'; attempt++) {
+    const match = /'([^']+)' column/.exec(error.message);
+    if (!match?.[1] || !(match[1] in dbRow)) break;
+    delete dbRow[match[1]];
+    const retry = await writeRow(dbRow);
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     const hint =
-      error.code === '42P01'
-        ? `Table "${tableName}" does not exist in Supabase yet. Run supabase/schema.sql in your Supabase SQL Editor.`
+      error.code === '42P01' || error.code === 'PGRST205'
+        ? `Table "${tableName}" does not exist in Supabase yet.`
         : error.message;
     return {
       status: 502,
@@ -502,8 +759,16 @@ export async function handleUpsertWebsiteProduct(
 
   const webhookResult = await forwardOptionalWebhook(sanitizedPayload);
   const mappedProduct = data
-    ? mapSupabaseRowToProduct(data as Record<string, unknown>)
-    : { ...sanitizedPayload, websiteSyncStatus: 'synced' as const, lastSyncedAt: sanitizedPayload.syncedAt };
+    ? mapSupabaseRowToProduct(data as Record<string, unknown>, {
+        categoryIdToName: categoryLookup.idToName,
+        fallbackSku: sanitizedPayload.sku,
+        fallbackImages: sanitizedPayload.images,
+      })
+    : {
+        ...sanitizedPayload,
+        websiteSyncStatus: 'synced' as const,
+        lastSyncedAt: sanitizedPayload.syncedAt,
+      };
 
   return {
     status: 200,
@@ -548,11 +813,20 @@ export async function handleDeleteWebsiteProduct(
   }
 
   const tableName = getProductsTableName();
+  const schema = await getProductsTableSchema(tableName);
+  const hasSkuCol = schema.columns ? schema.columns.has('sku') : false;
+
   let query = supabase.from(tableName).delete();
-  if (sku) {
-    query = query.eq('sku', sku);
-  } else if (id) {
+  if (id && (!schema.idIsUuid || isUuid(id))) {
     query = query.eq('id', id);
+  } else if (sku && hasSkuCol) {
+    query = query.eq('sku', sku);
+  } else {
+    // Local-only item that was never persisted with a valid remote id/sku
+    return {
+      status: 200,
+      payload: { ok: true, deleted: { id: id ?? null, sku: sku ?? null }, localOnly: true },
+    };
   }
 
   const { error } = await query;

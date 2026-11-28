@@ -483,9 +483,10 @@ export default function App() {
 
         const remoteProducts = Array.isArray(data.products) ? data.products : [];
         setProducts((prev) => {
+          const remoteIds = new Set(remoteProducts.map((p) => p.id));
           const remoteSkus = new Set(remoteProducts.map((p) => p.sku));
           const unsyncedLocals = prev.filter(
-            (p) => !remoteSkus.has(p.sku) && p.websiteSyncStatus !== 'synced'
+            (p) => !remoteIds.has(p.id) && !remoteSkus.has(p.sku) && p.websiteSyncStatus !== 'synced'
           );
           return [...remoteProducts, ...unsyncedLocals];
         });
@@ -535,9 +536,10 @@ export default function App() {
           if (prodData.ok && Array.isArray(prodData.products)) {
             const remoteProducts = prodData.products;
             setProducts((prev) => {
+              const remoteIds = new Set(remoteProducts.map((p) => p.id));
               const remoteSkus = new Set(remoteProducts.map((p) => p.sku));
               const unsyncedLocals = prev.filter(
-                (p) => !remoteSkus.has(p.sku) && p.websiteSyncStatus !== 'synced'
+                (p) => !remoteIds.has(p.id) && !remoteSkus.has(p.sku) && p.websiteSyncStatus !== 'synced'
               );
               return [...remoteProducts, ...unsyncedLocals];
             });
@@ -616,7 +618,11 @@ export default function App() {
           return;
         }
         if (res.ok && data.ok && data.product) {
-          setProducts((prev) => prev.map((p) => (p.sku === data.product!.sku ? data.product! : p)));
+          setProducts((prev) =>
+            prev.map((p) =>
+              p.id === data.product!.id || p.sku === data.product!.sku ? data.product! : p
+            )
+          );
         }
       } catch {
         // Keep local update if background sync fails
@@ -1152,10 +1158,13 @@ export default function App() {
     if (target) {
       notify(`Removed ${target.name} (${target.sku}) from catalog`);
       if (adminToken && backendConfig.supabaseConfigured) {
-        void fetch(`/api/website/products?sku=${encodeURIComponent(target.sku)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }).then(async (res) => {
+        void fetch(
+          `/api/website/products?id=${encodeURIComponent(target.id)}&sku=${encodeURIComponent(target.sku)}`,
+          {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${adminToken}` },
+          }
+        ).then(async (res) => {
           if (res.status === 401) {
             setAdminToken(null);
             notify('Removed locally; unlock admin session to delete from Supabase.');
